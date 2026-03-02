@@ -1,0 +1,36 @@
+// import { NextResponse } from 'next/server';
+// import type { NextRequest } from 'next/server';
+
+// export function middleware(request: NextRequest) {
+//   // 定义不需要认证的路径
+//   const publicPaths = ['/login', '/register', '/'];
+//   const isPublicPath = publicPaths.includes(request.nextUrl.pathname);
+  
+//   // 检查认证token
+//   const token = request.cookies.get('token')?.value || 
+//                 request.headers.get('Authorization')?.replace('Bearer ', '');
+  
+//   // 如果访问需要认证的页面但没有token，重定向到登录页
+//   if (!isPublicPath && !token) {
+//     return NextResponse.redirect(new URL('/login', request.url));
+//   }
+  
+//   // 如果已经登录却访问登录/注册页，重定向到聊天页
+//   if (isPublicPath && token) {
+//     return NextResponse.redirect(new URL('/chat', request.url));
+//   }
+  
+//   return NextResponse.next();
+// }
+
+// export const config = {
+//   matcher: [
+//     /*
+//      * 匹配所有请求路径，除了：
+//      * 1. api路径
+//      * 2. 静态文件
+//      * 3. favicon.ico
+//      */
+//     '/((?!api|_next/static|_next/image|favicon.ico).*)',
+//   ],
+// };

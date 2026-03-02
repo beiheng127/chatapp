@@ -1,0 +1,186 @@
+/* frontend/src/app/globals.css */
+/* 添加以下内容到现有CSS文件中 */
+
+/* 主题变量 */
+:root {
+  /* 浅色主题变量 */
+  --primary-color: #1890ff;
+  --primary-color-fade: #e6f7ff;
+  --background-color: #ffffff;
+  --text-color: #333333;
+  --text-secondary: #8c8c8c;
+  --border-color: #f0f0f0;
+  --card-background: #ffffff;
+  --hover-color: #f5f5f5;
+  
+  /* 字体大小 */
+  --font-size-small: 12px;
+  --font-size-medium: 14px;
+  --font-size-large: 16px;
+  
+  /* 间距 */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+}
+
+/* 深色主题变量 */
+.theme-dark {
+  --primary-color: #1890ff;
+  --primary-color-fade: rgba(24, 144, 255, 0.15);
+  --background-color: #141414;
+  --text-color: #ffffff;
+  --text-secondary: #8c8c8c;
+  --border-color: #303030;
+  --card-background: #1f1f1f;
+  --hover-color: #262626;
+}
+
+/* 字体大小类 */
+.font-small {
+  --font-size-small: 11px;
+  --font-size-medium: 13px;
+  --font-size-large: 15px;
+}
+
+.font-medium {
+  --font-size-small: 12px;
+  --font-size-medium: 14px;
+  --font-size-large: 16px;
+}
+
+.font-large {
+  --font-size-small: 13px;
+  --font-size-medium: 16px;
+  --font-size-large: 18px;
+}
+
+/* 紧凑模式 */
+.compact-mode {
+  --spacing-xs: 2px;
+  --spacing-sm: 4px;
+  --spacing-md: 8px;
+  --spacing-lg: 16px;
+  --spacing-xl: 24px;
+}
+
+/* 应用变量到全局样式 */
+body {
+  background-color: var(--background-color);
+  color: var(--text-color);
+  font-size: var(--font-size-medium);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* 卡片样式 */
+/* .ant-card {
+  background-color: var(--card-background) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-color) !important;
+} */
+
+/* 输入框样式 */
+/* .ant-input,
+.ant-input-number,
+.ant-select-selector {
+  background-color: var(--card-background) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-color) !important;
+} */
+
+/* 按钮悬停效果 */
+/* .ant-btn:hover {
+  background-color: var(--hover-color) !important;
+} */
+
+/* 菜单样式 */
+/* .ant-menu {
+  background-color: var(--background-color) !important;
+  color: var(--text-color) !important;
+}
+
+.ant-menu-item:hover {
+  background-color: var(--hover-color) !important;
+} */
+
+/* 表格样式 */
+/* .ant-table {
+  background-color: var(--background-color) !important;
+  color: var(--text-color) !important;
+}
+
+.ant-table-thead > tr > th {
+  background-color: var(--card-background) !important;
+  color: var(--text-color) !important;
+  border-color: var(--border-color) !important;
+}
+
+.ant-table-tbody > tr > td {
+  border-color: var(--border-color) !important;
+} */
+
+/* 模态框样式 */
+/* .ant-modal-content {
+  background-color: var(--card-background) !important;
+  color: var(--text-color) !important;
+} */
+
+/* 消息样式 */
+/* .ant-message-notice-content {
+  background-color: var(--card-background) !important;
+  color: var(--text-color) !important;
+} */
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background-color);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-color);
+}
+
+/* 聊天消息气泡样式 */
+.chat-message-bubble {
+  background-color: var(--primary-color);
+  color: white;
+  border-radius: 12px;
+  padding: 8px 12px;
+  max-width: 70%;
+  word-wrap: break-word;
+}
+
+.chat-message-bubble.other {
+  background-color: var(--card-background);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+}
+
+/* 消息列表样式 */
+.message-list-container {
+  height: calc(100vh - 200px);
+  overflow-y: auto;
+  padding: var(--spacing-md);
+}
+
+/* 紧凑模式下的消息 */
+.compact-mode .message-list-container {
+  padding: var(--spacing-sm);
+}
+
+.compact-mode .chat-message-bubble {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  margin-bottom: var(--spacing-xs);
+}

@@ -1,0 +1,123 @@
+// // app/(chat)/[roomId]/layout.tsx
+// 'use client';
+
+// import { ReactNode } from 'react';
+// import { useRouter } from 'next/navigation';
+// import { Layout, Menu, Button, Avatar, Typography, Tooltip, Dropdown, MenuProps } from 'antd';
+// import {
+//   TeamOutlined,
+//   SettingOutlined,
+//   InfoCircleOutlined,
+//   UserAddOutlined,
+//   ArrowLeftOutlined,
+//   MoreOutlined,
+//   LogoutOutlined
+// } from '@ant-design/icons';
+// import { useAuthStore } from '@/store/authStore';
+// import { roomService } from '@/services/roomService';
+// import { useParams } from 'next/navigation';
+
+// const { Header, Content, Sider } = Layout;
+// const { Title, Text } = Typography;
+
+// interface ChatRoomLayoutProps {
+//   children: ReactNode;
+// }
+
+// export default function ChatRoomLayout({ children }: ChatRoomLayoutProps) {
+//   const router = useRouter();
+//   const params = useParams();
+//   const roomId = params?.roomId as string;
+//   const { user } = useAuthStore();
+  
+//   // 菜单项
+//   const menuItems = [
+//     {
+//       key: `/chat/${roomId}`,
+//       icon: <TeamOutlined />,
+//       label: '聊天',
+//     },
+//     {
+//       key: `/chat/${roomId}/info`,
+//       icon: <InfoCircleOutlined />,
+//       label: '群聊信息',
+//     },
+//     {
+//       key: `/chat/${roomId}/settings`,
+//       icon: <SettingOutlined />,
+//       label: '群聊设置',
+//     },
+//     {
+//       key: `/chat/${roomId}/invite`,
+//       icon: <UserAddOutlined />,
+//       label: '邀请成员',
+//     },
+//   ];
+
+//   // 更多操作菜单
+//   const moreActions: MenuProps['items'] = [
+//     { 
+//       key: 'back', 
+//       label: '返回群聊列表', 
+//       icon: <ArrowLeftOutlined />,
+//       onClick: () => router.push('/chat/rooms')
+//     },
+//     { type: 'divider' },
+//     { 
+//       key: 'leave', 
+//       label: '退出群聊', 
+//       icon: <LogoutOutlined />,
+//       danger: true,
+//       onClick: async () => {
+//         // 离开群聊逻辑
+//         try {
+//           await roomService.leaveRoom(roomId);
+//           router.push('/chat/rooms');
+//         } catch (error) {
+//           console.error('退出群聊失败:', error);
+//         }
+//       }
+//     },
+//   ];
+
+//   return (
+//     <Layout style={{ height: 'calc(100vh - 64px)' }}>
+//       {/* 侧边栏菜单 */}
+//       <Sider width={200} theme="light" style={{ borderRight: '1px solid #f0f0f0' }}>
+//         <div style={{ padding: '16px', textAlign: 'center' }}>
+//           <Button
+//             type="text"
+//             icon={<ArrowLeftOutlined />}
+//             onClick={() => router.push('/chat/rooms')}
+//           >
+//             返回
+//           </Button>
+//         </div>
+        
+//         <Menu
+//           mode="inline"
+//           selectedKeys={[location.pathname]}
+//           style={{ borderRight: 0 }}
+//           items={menuItems}
+//           onClick={({ key }) => router.push(key as string)}
+//         />
+        
+//         {/* 底部操作 */}
+//         <div style={{ position: 'absolute', bottom: 0, width: '100%', padding: '16px' }}>
+//           <Dropdown menu={{ items: moreActions }} placement="topRight">
+//             <Button type="text" icon={<MoreOutlined />} block>
+//               更多操作
+//             </Button>
+//           </Dropdown>
+//         </div>
+//       </Sider>
+
+//       {/* 主要内容区域 */}
+//       <Layout>
+//         <Content style={{ margin: 0, overflow: 'auto' }}>
+//           {children}
+//         </Content>
+//       </Layout>
+//     </Layout>
+//   );
+// }
