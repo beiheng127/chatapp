@@ -1,3 +1,23 @@
+用户主页面
+<img width="2550" height="1166" alt="image" src="https://github.com/user-attachments/assets/6f027f9a-6525-44e9-a30b-ce9ef7adf378" />
+私聊界面
+<img width="2550" height="1156" alt="image" src="https://github.com/user-attachments/assets/59783778-34fd-447f-84a4-408df2372ea5" />
+群聊聊天室界面
+<img width="2547" height="1164" alt="image" src="https://github.com/user-attachments/assets/3877b6a0-b430-448e-a671-93099b68ed59" />
+群聊的信息
+<img width="2540" height="1355" alt="image" src="https://github.com/user-attachments/assets/2c19ce9d-aa0c-481b-bfa6-303ae5506369" />
+群聊设置
+<img width="2549" height="1179" alt="image" src="https://github.com/user-attachments/assets/b4777afc-beaa-4213-abb2-8a86f9afb199" />
+邀请成员
+<img width="2538" height="1170" alt="image" src="https://github.com/user-attachments/assets/347052d1-a23e-4c13-97e4-61d669e8fc8a" />
+群聊列表
+<img width="2544" height="1166" alt="image" src="https://github.com/user-attachments/assets/a2aa528c-72e3-4eb4-8cf4-b4d70160be90" />
+个人资料
+<img width="2539" height="1171" alt="image" src="https://github.com/user-attachments/assets/eda0392c-61f6-4950-8339-6621bc155fc6" />
+系统设置
+<img width="2532" height="1185" alt="image" src="https://github.com/user-attachments/assets/9caac3f5-0378-4228-a281-fb1e7cff295a" />
+
+
 # chatapp
 - 一个包含前后端的实时聊天应用，支持房间群聊与私信、文件上传、在线状态与输入中提示。前端基于 Next.js App Router，后端基于 Express + MongoDB，并使用 WebSocket 实现实时通信。
 - 前端技术栈：Next.js 16 + React 19、Ant Design、Zustand、styled-components（Tailwind 已配置依赖）。参考: frontend/package.json 、 next.config.ts 。
