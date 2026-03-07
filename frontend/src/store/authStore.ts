@@ -86,6 +86,9 @@ export const useAuthStore = create<AuthState>()(
             console.log('登录成功，更新store状态');
             const transformedUser = transformUser(response.data.user);
             
+            // 设置 Cookie 供 Middleware 使用
+            document.cookie = `chat-token=${response.data.token}; path=/; max-age=604800; samesite=lax`;
+            
             set({
               token: response.data.token,
               user: transformedUser,
@@ -130,6 +133,10 @@ export const useAuthStore = create<AuthState>()(
           
           if (response.success && response.data?.token && response.data?.user) {
             const transformedUser = transformUser(response.data.user);
+            
+            // 设置 Cookie 供 Middleware 使用
+            document.cookie = `chat-token=${response.data.token}; path=/; max-age=604800; samesite=lax`;
+            
             set({
               token: response.data.token,
               user: transformedUser,
@@ -158,6 +165,9 @@ export const useAuthStore = create<AuthState>()(
 
       logout: () => {
         console.log('执行退出登录...');
+        
+        // 清除 Cookie
+        document.cookie = 'chat-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; samesite=lax';
         
         set({
           token: null,
@@ -188,6 +198,10 @@ export const useAuthStore = create<AuthState>()(
             if (response.success && response.data?.user) {
               console.log('认证成功，用户:', response.data.user);
               const transformedUser = transformUser(response.data.user);
+              
+              // 确保 Cookie 与 Token 同步
+              document.cookie = `chat-token=${token}; path=/; max-age=604800; samesite=lax`;
+              
               set({
                 token,
                 user: transformedUser,
@@ -198,12 +212,15 @@ export const useAuthStore = create<AuthState>()(
               console.log('认证失败，清除状态');
               get().logout();
             }
-          } catch (error: unknown) { // 修复：移除 any，改为 unknown
+          } catch (error: unknown) {
             console.error('认证检查错误:', error);
             get().logout();
           } finally {
             set({ isLoading: false });
           }
+        } else {
+          // 如果没有 token，也要将 isLoading 设为 false，否则页面会一直显示加载中
+          set({ isLoading: false });
         }
       },
 

@@ -15,53 +15,22 @@ const JWT_EXPIRES_IN = '7d';
 const sendEmail = async (to: string, subject: string, html: string) => {
   // 如果配置了SMTP，使用SMTP发送
   if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
-    try {
-      const port = parseInt(process.env.SMTP_PORT || '465');
-      const secure = process.env.SMTP_SECURE === 'true' || port === 465;
-      
-      console.log(`[Email Config] Host: ${process.env.SMTP_HOST}, Port: ${port}, Secure: ${secure}, User: ${process.env.SMTP_USER}`);
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: parseInt(process.env.SMTP_PORT || '587'),
+      secure: process.env.SMTP_SECURE === 'true',
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
 
-      const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: port,
-        secure: secure, // true for 465, false for other ports
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
-        },
-        // 对应 Spring 配置的超时设置
-        connectionTimeout: 5000, // spring.mail.properties.mail.smtp.connectiontimeout
-        greetingTimeout: 3000, // spring.mail.properties.mail.smtp.timeout
-        socketTimeout: 5000, // spring.mail.properties.mail.smtp.writetimeout
-        debug: true, // 开启调试日志
-        logger: true // 开启日志记录
-      });
-
-      // 验证连接配置
-      try {
-        await transporter.verify();
-        console.log('[Email] Server connection verified');
-      } catch (verifyError) {
-        console.error('[Email] Verification failed:', verifyError);
-        throw verifyError;
-      }
-
-      await transporter.sendMail({
-        from: process.env.SMTP_FROM || `"Chat App" <${process.env.SMTP_USER}>`,
-        to,
-        subject,
-        html,
-      });
-      console.log(`[Email Sent] To: ${to}, Subject: ${subject}`);
-    } catch (error) {
-      console.error('Email sending failed:', error);
-      // Fallback to console log in development if email fails
-      console.log('==================================================');
-      console.log(`[Email Fallback] To: ${to}`);
-      console.log(`[Email Fallback] Subject: ${subject}`);
-      console.log(`[Email Fallback] Content: ${html}`);
-      console.log('==================================================');
-    }
+    await transporter.sendMail({
+      from: process.env.SMTP_FROM || '"Chat App" <noreply@chatapp.com>',
+      to,
+      subject,
+      html,
+    });
   } else {
     // 开发环境：仅打印到控制台
     console.log('==================================================');

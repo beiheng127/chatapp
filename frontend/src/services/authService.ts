@@ -214,7 +214,7 @@ export const authService = {
       //   console.log(`${key}: ${value}`);
       // }
       
-      // 直接使用原生fetch
+      //使用原生fetch
       const token = this.getToken();
       const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 

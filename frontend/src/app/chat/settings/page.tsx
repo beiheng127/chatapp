@@ -225,7 +225,7 @@ export default function SettingsPage() {
           onFinish={handleSave}
         >
           {/* 外观设置 */}
-          <Card title="外观设置" style={{ marginBottom: 24 }} bordered={false}>
+          <Card title="外观设置" style={{ marginBottom: 24 }} variant="borderless">
             <Row gutter={[24, 16]}>
               <Col xs={24} md={12}>
                 <Form.Item
@@ -292,7 +292,7 @@ export default function SettingsPage() {
                   valuePropName="checked"
                   label="布局选项"
                 >
-                  <Space direction="vertical">
+                  <Space orientation="vertical">
                     <Switch
                       checkedChildren="紧凑模式"
                       unCheckedChildren="常规模式"
@@ -307,7 +307,7 @@ export default function SettingsPage() {
           </Card>
 
           {/* 聊天设置 */}
-          <Card title="聊天设置" style={{ marginBottom: 24 }} bordered={false}>
+          <Card title="聊天设置" style={{ marginBottom: 24 }} variant="borderless">
             <Form.Item
               name="chatEnterToSend"
               valuePropName="checked"
@@ -330,7 +330,7 @@ export default function SettingsPage() {
           </Card>
 
           {/* 通知设置 */}
-          <Card title="通知设置" style={{ marginBottom: 24 }} bordered={false}>
+          <Card title="通知设置" style={{ marginBottom: 24 }} variant="borderless">
             <Form.Item
               name="notificationEnabled"
               valuePropName="checked"
@@ -359,7 +359,7 @@ export default function SettingsPage() {
           </Card>
 
           {/* 隐私设置 */}
-          <Card title="隐私设置" style={{ marginBottom: 24 }} bordered={false}>
+          <Card title="隐私设置" style={{ marginBottom: 24 }} variant="borderless">
             <Form.Item
               name="privacyOnlineStatus"
               valuePropName="checked"
@@ -378,7 +378,7 @@ export default function SettingsPage() {
           </Card>
 
           {/* 语言和地区 */}
-          <Card title="语言和地区" style={{ marginBottom: 32 }} bordered={false}>
+          <Card title="语言和地区" style={{ marginBottom: 32 }} variant="borderless">
             <Form.Item
               name="language"
               label={

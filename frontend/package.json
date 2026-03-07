@@ -12,9 +12,11 @@
     "antd": "^6.1.0",
     "axios": "^1.13.2",
     "next": "16.0.8",
+    "rc-virtual-list": "^3.19.2",
     "react": "19.2.1",
     "react-dom": "19.2.1",
     "styled-components": "^6.1.19",
+    "swr": "^2.4.1",
     "zustand": "^5.0.9"
   },
   "devDependencies": {

@@ -30,6 +30,7 @@ import {
 } from '@ant-design/icons';
 import { useAuthStore } from '@/store/authStore';
 import { roomService, type Room } from '@/services/roomService';
+import useSWR from 'swr';
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -46,37 +47,25 @@ export default function ChatRoomsPage() {
   const router = useRouter();
   const { user } = useAuthStore();
   const [messageApi, contextHolder] = message.useMessage();
-  const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [rooms, setRooms] = useState<Room[]>([]);
-  const [publicRooms, setPublicRooms] = useState<Room[]>([]);
   const [form] = Form.useForm();
 
-  // 加载用户加入的群聊
-  const loadUserRooms = async () => {
-    try {
-      const result = await roomService.getUserRooms();
-      if (result.success && result.data) {
-        setRooms(result.data);
-      }
-    } catch (error) {
-      console.error('加载群聊失败:', error);
-      messageApi.error('加载群聊失败');
-    }
-  };
+  // 使用 SWR 加载用户加入的群聊
+  const { data: userRoomsData, mutate: mutateUserRooms, isLoading: loadingUserRooms } = useSWR(
+    user ? '/rooms/my-rooms' : null,
+    () => roomService.getUserRooms().then(res => res.data || [])
+  );
 
-  // 加载公开群聊
-  const loadPublicRooms = async () => {
-    try {
-      const result = await roomService.getPublicRooms({ search: searchText });
-      if (result.success && result.data) {
-        setPublicRooms(result.data.data);
-      }
-    } catch (error) {
-      console.error('加载公开群聊失败:', error);
-    }
-  };
+  // 使用 SWR 加载公开群聊
+  const { data: publicRoomsData, mutate: mutatePublicRooms, isLoading: loadingPublicRooms } = useSWR(
+    user ? ['/rooms/public', searchText] : null,
+    () => roomService.getPublicRooms({ search: searchText }).then(res => res.data?.data || [])
+  );
+
+  const rooms = userRoomsData || [];
+  const publicRooms = publicRoomsData || [];
+  const loading = loadingUserRooms || loadingPublicRooms;
 
   // 创建群聊
   const handleCreateRoom = async (values: CreateRoomForm) => {
@@ -90,13 +79,11 @@ export default function ChatRoomsPage() {
       
       if (result.success && result.data) {
         messageApi.success('聊天室创建成功！');
-        console.log('📝 创建聊天室表单数据:', values);
-        console.log('🔍 isPrivate 值:', values.isPrivate, '类型:', typeof values.isPrivate);
         setShowCreateModal(false);
         form.resetFields();
         
-        // 重新加载群聊列表
-        await loadUserRooms();
+        // 使用 mutate 立即刷新数据
+        mutateUserRooms();
         
         // 跳转到新创建的群聊
         router.push(`/chat/${result.data._id}`);
@@ -116,8 +103,8 @@ export default function ChatRoomsPage() {
       if (result.success) {
         messageApi.success('加入群聊成功！');
         // 重新加载群聊列表
-        await loadUserRooms();
-        loadPublicRooms();
+        mutateUserRooms();
+        mutatePublicRooms();
         // 跳转到群聊
         router.push(`/chat/${roomId}`);
       } else {
@@ -136,7 +123,7 @@ export default function ChatRoomsPage() {
       if (result.success) {
         messageApi.success('已退出群聊');
         // 重新加载群聊列表
-        await loadUserRooms();
+        mutateUserRooms();
       } else {
         messageApi.error(result.message || '退出失败');
       }
@@ -149,27 +136,8 @@ export default function ChatRoomsPage() {
   useEffect(() => {
     if (!user) {
       router.push('/login');
-      return;
     }
-    
-    const init = async () => {
-      setLoading(true);
-      try {
-        await loadUserRooms();
-        await loadPublicRooms();
-      } catch (error) {
-        console.error('初始化失败:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    init();
   }, [user, router]);
-
-  useEffect(() => {
-    loadPublicRooms();
-  }, [searchText]);
 
   if (!user) {
     return null;
@@ -196,7 +164,7 @@ export default function ChatRoomsPage() {
             prefix={<SearchOutlined />}
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
-            onSearch={loadPublicRooms}
+            onSearch={() => mutatePublicRooms()}
             allowClear
             size="large"
           />
@@ -359,6 +327,9 @@ export default function ChatRoomsPage() {
           onCancel={() => setShowCreateModal(false)}
           footer={null}
           width={600}
+          destroyOnHidden
+          maskClosable={false}
+          centered
         >
           <Form
             form={form}

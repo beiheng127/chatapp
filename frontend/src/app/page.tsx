@@ -20,10 +20,10 @@ export default function HomePage() {
     if (!isLoading) {
       if (isAuthenticated) {
         // 已登录，重定向到聊天主页
-        router.push('/chat');
+        router.replace('/chat');
       } else {
         // 未登录，重定向到登录页
-        router.push('/login');
+        router.replace('/login');
       }
     }
   }, [isAuthenticated, isLoading, router]);

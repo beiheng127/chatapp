@@ -5,9 +5,7 @@ import type { Metadata } from 'next';
 import './global.css';
 import Providers from './providers';
 import { AuthInitializer } from '@/components/auth/AuthInitializer';
-
-
-// const inter = Inter({ subsets: ['latin'] });
+import AntdRegistry from './AntdRegistry';
 
 export const metadata: Metadata = {
   title: 'ChatApp - 实时聊天室',
@@ -23,11 +21,13 @@ export default function RootLayout({
     <html lang="zh-CN">
       {/* <body className={inter.className}> */}
       <body>
+        <AntdRegistry>
           <AuthInitializer>
             <Providers>
             {children}
             </Providers>
           </AuthInitializer>
+        </AntdRegistry>
       </body>
     </html>
   );

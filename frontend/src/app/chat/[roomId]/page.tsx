@@ -56,6 +56,7 @@ import { roomService, type Room } from '@/services/roomService';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/zh-cn';
+import VirtualList from 'rc-virtual-list';
 
 dayjs.extend(relativeTime);
 dayjs.locale('zh-cn');
@@ -87,6 +88,7 @@ export default function ChatRoomPage() {
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const virtualListRef = useRef<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   
@@ -121,6 +123,32 @@ export default function ChatRoomPage() {
     isConnected 
   } = useWebSocket();
 
+  // 按日期分组消息
+  const getGroupedMessages = useCallback((): DateGroupedMessages => {
+    return messages.reduce((groups: DateGroupedMessages, message) => {
+      const date = dayjs(message.createdAt).format('YYYY-MM-DD');
+      if (!groups[date]) {
+        groups[date] = [];
+      }
+      groups[date].push(message);
+      return groups;
+    }, {});
+  }, [messages]);
+
+  // 格式化日期标题
+  const formatDateTitle = useCallback((date: string): string => {
+    const today = dayjs().format('YYYY-MM-DD');
+    const yesterday = dayjs().subtract(1, 'day').format('YYYY-MM-DD');
+    
+    if (date === today) {
+      return '今天';
+    } else if (date === yesterday) {
+      return '昨天';
+    } else {
+      return dayjs(date).format('YYYY年MM月DD日');
+    }
+  }, []);
+
   // 安全的浏览器API函数
   const safeWindowOpen = useCallback((url: string, target?: string) => {
     if (typeof window !== 'undefined') {
@@ -142,22 +170,38 @@ export default function ChatRoomPage() {
 
   // 滚动到底部
   const scrollToBottom = useCallback(() => {
-    if (messagesContainerRef.current) {
-      const container = messagesContainerRef.current;
-      container.scrollTop = container.scrollHeight;
+    if (virtualListRef.current && messages.length > 0) {
+      // 获取当前最新的平铺消息数组
+      const currentGroups = getGroupedMessages();
+      const flatMessages = Object.entries(currentGroups).reduce((acc: any[], [date, dateMessages]) => {
+        acc.push({ _isDivider: true, date, _id: `divider-${date}` });
+        return acc.concat(dateMessages.map(m => ({ ...m, _isDivider: false })));
+      }, []);
+      
+      if (flatMessages.length > 0) {
+        // 使用 VirtualList 的 scrollTo 滚动到最后一项
+        // 增加 index 确保滚动到最底部
+        virtualListRef.current.scrollTo({ 
+          index: flatMessages.length - 1, 
+          align: 'bottom' 
+        });
+      }
       setShowScrollToBottom(false);
     }
-  }, []);
+  }, [messages, getGroupedMessages]);
 
   // 检查是否需要显示滚动到底部按钮
   const checkScrollPosition = useCallback(() => {
     if (!messagesContainerRef.current) return;
     
-    const container = messagesContainerRef.current;
-    const { scrollTop, scrollHeight, clientHeight } = container;
-    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-    
-    setShowScrollToBottom(distanceFromBottom > 300);
+    // 注意：在使用 VirtualList 时，滚动高度由 VirtualList 内部管理
+    // 这里我们通过 messagesContainerRef 里的 VirtualList 容器来获取
+    const scrollContainer = messagesContainerRef.current.querySelector('.rc-virtual-list-holder');
+    if (scrollContainer) {
+      const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
+      const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+      setShowScrollToBottom(distanceFromBottom > 300);
+    }
   }, []);
 
   // 更新容器高度
@@ -539,17 +583,14 @@ export default function ChatRoomPage() {
   };
 
   // 处理滚动事件
-  const handleScroll = useCallback(() => {
-    if (!messagesContainerRef.current) return;
-    
-    const container = messagesContainerRef.current;
-    const { scrollTop } = container;
+  const handleScroll = useCallback((e: React.UIEvent<HTMLElement>) => {
+    const { scrollTop } = e.currentTarget;
     
     // 检查是否需要显示滚动到底部按钮
     checkScrollPosition();
     
-    // 滚动到顶部时加载更多消息
-    if (scrollTop === 0 && !loadingMoreMessages && hasMoreMessages) {
+    // 滚动到顶部时加载更多消息 (留一点余量避免过于灵敏)
+    if (scrollTop <= 10 && !loadingMoreMessages && hasMoreMessages) {
       loadMoreMessages();
     }
   }, [loadingMoreMessages, hasMoreMessages, checkScrollPosition]);
@@ -628,32 +669,6 @@ export default function ChatRoomPage() {
     }
     
     return <Text style={{ color: 'inherit', whiteSpace: 'pre-wrap' }}>{msg.content}</Text>;
-  };
-
-  // 按日期分组消息
-  const getGroupedMessages = (): DateGroupedMessages => {
-    return messages.reduce((groups: DateGroupedMessages, message) => {
-      const date = dayjs(message.createdAt).format('YYYY-MM-DD');
-      if (!groups[date]) {
-        groups[date] = [];
-      }
-      groups[date].push(message);
-      return groups;
-    }, {});
-  };
-
-  // 格式化日期标题
-  const formatDateTitle = (date: string): string => {
-    const today = dayjs().format('YYYY-MM-DD');
-    const yesterday = dayjs().subtract(1, 'day').format('YYYY-MM-DD');
-    
-    if (date === today) {
-      return '今天';
-    } else if (date === yesterday) {
-      return '昨天';
-    } else {
-      return dayjs(date).format('YYYY年MM月DD日');
-    }
   };
 
   // 触发文件选择
@@ -779,6 +794,22 @@ export default function ChatRoomPage() {
     }
   }, [roomId]);
 
+  // 初始加载完成后自动滚动到底部
+  useEffect(() => {
+    if (!loading && messages.length > 0) {
+      // 增加多次尝试，确保虚拟列表完全渲染
+      const timer1 = setTimeout(() => scrollToBottom(), 100);
+      const timer2 = setTimeout(() => scrollToBottom(), 500);
+      const timer3 = setTimeout(() => scrollToBottom(), 1000);
+      
+      return () => {
+        clearTimeout(timer1);
+        clearTimeout(timer2);
+        clearTimeout(timer3);
+      };
+    }
+  }, [loading, roomId]); // 当加载状态改变或切换房间时触发
+
   // 设置自动刷新
   useEffect(() => {
     setupAutoRefresh();
@@ -838,6 +869,21 @@ export default function ChatRoomPage() {
     checkScrollPosition();
   }, [messages, checkScrollPosition]);
 
+  // 监听新消息到达，自动滚动到底部
+  useEffect(() => {
+    if (messages.length > 0 && !loadingMoreMessages && !loading) {
+      const scrollContainer = messagesContainerRef.current?.querySelector('.rc-virtual-list-holder');
+      if (scrollContainer) {
+        const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
+        // 如果用户已经在底部附近 (150px)，则自动滚动到最新消息
+        const isNearBottom = scrollHeight - scrollTop - clientHeight < 150;
+        if (isNearBottom) {
+          scrollToBottom();
+        }
+      }
+    }
+  }, [messages.length, loadingMoreMessages, loading, scrollToBottom]);
+
   if (loading && !room) {
     return (
       <div style={{ padding: '40px' }}>
@@ -885,8 +931,13 @@ export default function ChatRoomPage() {
     );
   }
 
-  const groupedMessages = getGroupedMessages();
-  const hasMessages = Object.keys(groupedMessages).length > 0;
+  // 为虚拟列表生成平铺的消息数组（包含日期分割线）
+  const flatMessages = Object.entries(getGroupedMessages()).reduce((acc: any[], [date, dateMessages]) => {
+    acc.push({ _isDivider: true, date, _id: `divider-${date}` });
+    return acc.concat(dateMessages.map(m => ({ ...m, _isDivider: false })));
+  }, []);
+
+  const hasMessages = flatMessages.length > 0;
 
   return (
     <>
@@ -1042,151 +1093,150 @@ export default function ChatRoomPage() {
           ref={messagesContainerRef}
           style={{ 
             flex: 1,
-            overflowY: 'auto',
-            padding: '24px',
+            background: token.colorBgContainer,
             position: 'relative',
-            height: containerHeight || 'calc(100vh - 180px)'
+            overflow: 'hidden'
           }}
-          onScroll={handleScroll}
         >
-          {/* 加载更多指示器 */}
-          {loadingMoreMessages && (
-            <div style={{ textAlign: 'center', padding: '16px' }}>
-              <Spin size="small" />
-              <Text type="secondary"> 加载历史消息...</Text>
-            </div>
-          )}
-          
           {loading ? (
             <div style={{ padding: '40px', textAlign: 'center' }}>
               <Skeleton active paragraph={{ rows: 3 }} />
             </div>
           ) : hasMessages ? (
-            <>
-              {/* 消息内容 - 按日期分组 */}
-              {Object.entries(groupedMessages).map(([date, dateMessages]) => (
-                <div key={date}>
-                  <Divider>
-                    <Tag color="blue">
-                      {formatDateTitle(date)}
-                    </Tag>
-                  </Divider>
-                  
-                  {dateMessages.map((msg) => {
-                    const isOwn = msg.sender._id === user?.id;
-                    const isFailed = (msg as any).status === 'failed';
+            <VirtualList
+              data={flatMessages}
+              height={containerHeight || 600}
+              itemHeight={100} // 估算平均高度
+              itemKey="_id"
+              onScroll={handleScroll}
+              ref={virtualListRef}
+            >
+              {(msg: any) => {
+                if (msg._isDivider) {
+                  return (
+                    <div key={msg._id} style={{ padding: '0 24px' }}>
+                      <Divider>
+                        <Tag color="blue">
+                          {formatDateTitle(msg.date)}
+                        </Tag>
+                      </Divider>
+                    </div>
+                  );
+                }
+
+                const isOwn = msg.sender?._id === user?.id;
+                const isFailed = (msg as any).status === 'failed';
+                
+                return (
+                  <div
+                    key={msg._id}
+                    style={{
+                      display: 'flex',
+                      justifyContent: isOwn ? 'flex-end' : 'flex-start',
+                      marginBottom: '16px',
+                      padding: '0 24px',
+                      alignItems: 'flex-start'
+                    }}
+                  >
+                    {!isOwn && (
+                      <Avatar 
+                        src={msg.sender?.avatar} 
+                        style={{ marginRight: '8px', alignSelf: 'flex-start', flexShrink: 0 }} 
+                      />
+                    )}
                     
-                    return (
-                      <div
-                        key={msg._id}
-                        style={{
-                          display: 'flex',
-                          justifyContent: isOwn ? 'flex-end' : 'flex-start',
-                          marginBottom: '16px',
-                          alignItems: 'flex-start'
-                        }}
-                      >
-                        {!isOwn && (
-                          <Avatar 
-                            src={msg.sender.avatar} 
-                            style={{ marginRight: '8px', alignSelf: 'flex-start' }} 
-                          />
-                        )}
-                        
-                        <div style={{ maxWidth: '70%' }}>
-                          {!isOwn && (
-                            <Text strong style={{ marginLeft: '8px', fontSize: '12px' }}>
-                              {msg.sender.username}
-                            </Text>
-                          )}
+                    <div style={{ maxWidth: '70%', minWidth: 0 }}>
+                      {!isOwn && (
+                        <Text strong style={{ marginLeft: '8px', fontSize: '12px' }}>
+                          {msg.sender?.username}
+                        </Text>
+                      )}
+                      
+                      <div style={{ 
+                        display: 'flex', 
+                        flexDirection: isOwn ? 'row-reverse' : 'row',
+                        alignItems: 'flex-start',
+                        width: '100%'
+                      }}>
+                        <div
+                          style={{
+                            background: isFailed ? '#fff2f0' : (isOwn ? token.colorPrimary : token.colorFillAlter),
+                            border: isFailed ? '1px solid #ffccc7' : 'none',
+                            borderRadius: '12px',
+                            padding: '12px',
+                            maxWidth: '100%',
+                            position: 'relative',
+                            wordBreak: 'break-word',
+                            color: isOwn ? '#fff' : token.colorText
+                          }}
+                        >
+                          {renderMessageContent(msg)}
                           
-                          <div style={{ 
-                            display: 'flex', 
-                            flexDirection: isOwn ? 'row-reverse' : 'row',
-                            alignItems: 'flex-start'
-                          }}>
-                            <div
-                              style={{
-                                background: isFailed ? '#fff2f0' : (isOwn ? 'var(--primary-color)' : 'var(--hover-color)'),
-                                border: isFailed ? '1px solid #ffccc7' : 'none',
-                                borderRadius: '12px',
-                                padding: '12px',
-                                maxWidth: '100%',
-                                position: 'relative',
-                                wordBreak: 'break-word'
-                              }}
-                            >
-                              {renderMessageContent(msg)}
+                          {/* 消息状态指示器 */}
+                          {isOwn && (
+                            <div style={{ position: 'absolute', right: '-20px', top: '50%', transform: 'translateY(-50%)' }}>
+                              {(msg as any).status === 'failed' && (
+                                <Tooltip title="发送失败，点击重试">
+                                  <ExclamationCircleOutlined 
+                                    style={{ color: '#ff4d4f', cursor: 'pointer' }} 
+                                    onClick={() => {
+                                      if (msg.type !== 'system') {
+                                        retrySendMessage(msg._id, msg.content, msg.type as any, msg.fileInfo);
+                                      }
+                                    }}
+                                  />
+                                </Tooltip>
+                              )}
                               
-                              {/* 消息状态指示器 */}
-                              {isOwn && (
-                                <div style={{ position: 'absolute', right: '-20px', top: '50%', transform: 'translateY(-50%)' }}>
-                                  {(msg as any).status === 'failed' && (
-                                    <Tooltip title="发送失败，点击重试">
-                                      <ExclamationCircleOutlined 
-                                        style={{ color: '#ff4d4f', cursor: 'pointer' }} 
-                                        onClick={() => {
-                                          if (msg.type !== 'system') {
-                                            retrySendMessage(msg._id, msg.content, msg.type as any, msg.fileInfo);
-                                          }
-                                        }}
-                                      />
-                                    </Tooltip>
-                                  )}
-                                  
-                                  {(msg as any).status !== 'failed' && msg.readBy?.length > 0 && (
-                                    <Tooltip title="已读">
-                                      <CheckCircleOutlined style={{ color: '#52c41a' }} />
-                                    </Tooltip>
-                                  )}
-                                  
-                                  {(msg as any).status !== 'failed' && (!msg.readBy || msg.readBy.length === 0) && (
-                                    <Tooltip title="已发送">
-                                      <CheckCircleOutlined style={{ color: '#999' }} />
-                                    </Tooltip>
-                                  )}
-                                </div>
+                              {(msg as any).status !== 'failed' && msg.readBy?.length > 0 && (
+                                <Tooltip title="已读">
+                                  <CheckCircleOutlined style={{ color: '#52c41a' }} />
+                                </Tooltip>
+                              )}
+                              
+                              {(msg as any).status !== 'failed' && (!msg.readBy || msg.readBy.length === 0) && (
+                                <Tooltip title="已发送">
+                                  <CheckCircleOutlined style={{ color: '#999' }} />
+                                </Tooltip>
                               )}
                             </div>
-                            
-                            {isOwn && (
-                              <Avatar 
-                                src={user?.avatar} 
-                                size="small"
-                                style={{ marginRight: '8px' }} 
-                              />
-                            )}
-                          </div>
-                          
-                          <Text
-                            type="secondary"
-                            style={{
-                              fontSize: '11px',
-                              marginLeft: isOwn ? '0' : '8px',
-                              marginRight: isOwn ? '8px' : '0',
-                              marginTop: '4px',
-                              display: 'block',
-                              textAlign: isOwn ? 'right' : 'left',
-                            }}
-                          >
-                            {dayjs(msg.createdAt).format('HH:mm')}
-                          </Text>
+                          )}
                         </div>
+                        
+                        {isOwn && (
+                          <Avatar 
+                            src={user?.avatar} 
+                            size="small"
+                            style={{ marginLeft: '8px', flexShrink: 0 }} 
+                          />
+                        )}
                       </div>
-                    );
-                  })}
-                </div>
-              ))}
-              
-              {/* 滚动到底部锚点 */}
-              <div ref={messagesEndRef} />
-            </>
+                      
+                      <Text
+                        type="secondary"
+                        style={{
+                          fontSize: '11px',
+                          marginLeft: isOwn ? '0' : '8px',
+                          marginRight: isOwn ? '8px' : '0',
+                          marginTop: '4px',
+                          display: 'block',
+                          textAlign: isOwn ? 'right' : 'left',
+                        }}
+                      >
+                        {dayjs(msg.createdAt).format('HH:mm')}
+                      </Text>
+                    </div>
+                  </div>
+                );
+              }}
+            </VirtualList>
           ) : (
-            <Empty
-              description="还没有消息，发送第一条消息开始聊天吧！"
-              style={{ margin: 'auto' }}
-            />
+            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Empty description="还没有消息，发送第一条消息开始聊天吧！" />
+            </div>
           )}
+          
+          <div ref={messagesEndRef} />
         </div>
         
         {/* 附件预览 */}

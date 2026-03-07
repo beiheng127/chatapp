@@ -78,7 +78,7 @@ export const ChangePassword: React.FC = () => {
   };
 
   return (
-    <Card title="修改密码" bordered={false} style={{ marginTop: 24 }}>
+    <Card title="修改密码" variant="borderless" style={{ marginTop: 24 }}>
       <Form
         form={form}
         name="change_password"

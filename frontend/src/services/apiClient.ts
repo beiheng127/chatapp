@@ -77,7 +77,23 @@ class ApiClient {
         data?: T;
       };
       
-      const data = await response.json() as ResponseData;
+      let data: ResponseData;
+      try {
+        const text = await response.text();
+        // 尝试解析为 JSON
+        try {
+          data = JSON.parse(text) as ResponseData;
+        } catch (e) {
+          // 如果解析失败，说明不是 JSON
+          if (!response.ok) {
+            throw new Error(`服务器错误 (HTTP ${response.status})`);
+          }
+          throw new Error('服务器响应格式不正确');
+        }
+      } catch (error) {
+        if (error instanceof Error) throw error;
+        throw new Error('解析服务器响应失败');
+      }
       
       if (!response.ok) {
         throw new Error(data.message || `HTTP ${response.status}`);

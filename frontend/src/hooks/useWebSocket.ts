@@ -77,12 +77,35 @@ export const useWebSocket = () => {
   const token = useAuthStore((state) => state.token);
   const user = useAuthStore((state) => state.user);
   const addMessage = useChatStore((state) => state.addMessage);
+  
+  // 消息队列
+  const messageQueue = useRef<string[]>([]);
+
+  // 处理队列中的消息
+  const flushQueue = useCallback(() => {
+    while (messageQueue.current.length > 0 && wsRef.current?.readyState === WebSocket.OPEN) {
+      const msg = messageQueue.current.shift();
+      if (msg) wsRef.current.send(msg);
+    }
+  }, []);
+
+  // 统一的发送消息方法（支持队列）
+  const sendMessage = useCallback((type: string, data: any) => {
+    const messageStr = JSON.stringify({ type, data });
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(messageStr);
+      return true;
+    } else {
+      console.log('WebSocket 未连接，消息已加入待发送队列');
+      messageQueue.current.push(messageStr);
+      return false;
+    }
+  }, []);
 
   // 添加一个函数来清空接收到的消息
   const clearReceivedMessages = useCallback(() => {
     setReceivedMessages([]);
   }, []);
-
 
   const connect = useCallback(() => {
     if (!token || wsRef.current) return;
@@ -94,11 +117,15 @@ export const useWebSocket = () => {
     socket.onopen = () => {
       console.log('WebSocket 连接已建立');
       setIsConnected(true);
+      flushQueue();
     };
 
     socket.onmessage = (event) => {
       try {
         const message: BaseWebSocketMessage = JSON.parse(event.data);
+        
+        // 忽略后端的 ping/pong 协议包（如果它们被发往 onmessage 的话）
+        if ((message as any).type === 'ping' || (message as any).type === 'pong') return;
 
         // 如果是聊天消息，添加到接收到的消息列表
         if (message.type === 'chat_message') {
@@ -204,34 +231,7 @@ export const useWebSocket = () => {
         }
       }, 3000);
     };
-
-    return () => {
-      if (wsRef.current) {
-        try {
-          console.log('正在关闭 WebSocket 连接...');
-          wsRef.current.close();
-          console.log('WebSocket 连接已关闭');
-          wsRef.current = null;
-          setIsConnected(false);
-        } catch (error) {
-          console.error('关闭 WebSocket 连接时出错:', error);
-        }
-      } else {
-        console.log('WebSocket 连接未建立或已关闭，无需关闭');
-      }
-    };
   }, [token, addMessage]);
-
-  // 替换 any 为 SendMessageData
-  const sendMessage = useCallback((type: string, data: SendMessageData) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      const message = { type, data };
-      wsRef.current.send(JSON.stringify(message));
-      return true;
-    }
-    console.warn('WebSocket未连接，无法发送消息');
-    return false;
-  }, []);
 
   const sendChatMessage = useCallback((roomId: string, content: string) => {
     return sendMessage('chat_message', { 
@@ -270,15 +270,12 @@ export const useWebSocket = () => {
           if (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CLOSING) {
             console.log('正在关闭 WebSocket 连接...');
             wsRef.current.close();
-            console.log('WebSocket 连接已关闭');
-          } else {
-            console.log('WebSocket 连接未建立或已关闭，无需关闭');
           }
-          wsRef.current = null;
-          setIsConnected(false);
         } catch (error) {
           console.error('关闭 WebSocket 连接时出错:', error);
         }
+        wsRef.current = null;
+        setIsConnected(false);
       }
     };
   }, [token, connect]);

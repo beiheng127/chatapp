@@ -396,7 +396,7 @@ export default function ProfilePage() {
           
           <SessionManagement />
 
-          <Card title="危险区域" bordered={false} style={{ marginTop: 24 }}>
+          <Card title="危险区域" variant="borderless" style={{ marginTop: 24 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <Text strong type="danger">注销账号</Text>

@@ -5,6 +5,7 @@ import { ConfigProvider, App as AntdApp } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { SettingsInitializer } from '@/components/auth/SettingsInitializer';
+import { SWRConfig } from 'swr';
 
 export default function Providers({
   children,
@@ -12,7 +13,11 @@ export default function Providers({
   children: React.ReactNode;
 }) {
   return (
-    <ThemeProvider>
+    <SWRConfig value={{
+      revalidateOnFocus: false, // 减少自动刷新
+      shouldRetryOnError: false,
+    }}>
+      <ThemeProvider>
       <ConfigProvider locale={zhCN} theme={{
         token: {
           colorPrimary: '#1890ff',
@@ -39,5 +44,6 @@ export default function Providers({
         </AntdApp>
       </ConfigProvider>
     </ThemeProvider>
+    </SWRConfig>
   );
 }
