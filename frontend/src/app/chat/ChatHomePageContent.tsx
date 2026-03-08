@@ -4,7 +4,7 @@
 import React from 'react';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button, Empty, Card, List, Avatar, Typography, Tag, Space, theme } from 'antd';
+import { Button, Empty, Card, List, Avatar, Typography, Tag, Space, theme, Grid, Badge } from 'antd';
 import { 
   MessageOutlined, 
   TeamOutlined, 
@@ -20,8 +20,10 @@ import { useChatStore } from '@/store/chatStore';
 import { useAuthStore } from '@/store/authStore';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { roomService } from '@/services/roomService';
+import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
+const { useBreakpoint } = Grid;
 
 export default function ChatHomePageContent() {
   const router = useRouter();
@@ -30,6 +32,8 @@ export default function ChatHomePageContent() {
   const { isConnected } = useWebSocket();
   const [recentRooms, setRecentRooms] = useState<any[]>([]);
   const [messagesExpanded, setMessagesExpanded] = useState(false);
+  const screens = useBreakpoint();
+  const isMobile = !screens.md;
   
   const { token } = theme.useToken();
 
@@ -118,18 +122,20 @@ export default function ChatHomePageContent() {
   }
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-      <div style={{ marginBottom: '32px' }}>
-        <Title level={2}>欢迎回来，{user.username}！</Title>
-        <Text type="secondary">
-          WebSocket连接状态: 
-          <Tag color={isConnected ? 'success' : 'error'} style={{ marginLeft: '8px' }}>
+    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: isMobile ? '0 4px' : '0' }}>
+      <div style={{ marginBottom: isMobile ? '16px' : '32px' }}>
+        <Title level={isMobile ? 3 : 2}>欢迎回来，{user.username}！</Title>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <Text type="secondary">
+            WebSocket连接状态: 
+          </Text>
+          <Tag color={isConnected ? 'success' : 'error'} style={{ margin: 0 }}>
             {isConnected ? '已连接' : '未连接'}
           </Tag>
-        </Text>
+        </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '16px' : '24px' }}>
         {/* 最近聊天室 */}
         <Card
           title={
@@ -139,6 +145,7 @@ export default function ChatHomePageContent() {
             </div>
           }
           extra={<Button type="link" onClick={() => router.push('/chat/rooms')}>查看全部</Button>}
+          styles={{ body: { padding: isMobile ? '8px' : '24px' } }}
         >
           {recentRooms.length > 0 ? (
             <List
@@ -149,16 +156,16 @@ export default function ChatHomePageContent() {
                   <List.Item
                     style={{ 
                       cursor: 'pointer', 
-                      padding: '12px 16px',
+                      padding: isMobile ? '8px' : '12px 16px',
                       transition: 'background-color 0.3s',
                       borderRadius: '8px',
-                      marginBottom: '8px'
+                      marginBottom: '4px'
                     }}
                     className="room-item"
                     onMouseEnter={(e) => e.currentTarget.style.backgroundColor = token.colorFillTertiary}
                     onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     onClick={() => joinRoom(room.id)}
-                    actions={[
+                    actions={isMobile ? [] : [
                       <Tag key="members" color="blue">{room.memberCount || 0}人</Tag>,
                       room.unreadCount > 0 && (
                         <Tag key="unread" color="red">{room.unreadCount}条未读</Tag>
@@ -173,9 +180,16 @@ export default function ChatHomePageContent() {
                           style={{ backgroundColor: room.isPrivate ? '#ff4d4f' : '#1890ff' }}
                         />
                       }
-                      title={<Text strong style={{ color: token.colorText }}>{name}</Text>}
+                      title={
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Text strong style={{ color: token.colorText, fontSize: isMobile ? '14px' : '15px' }}>{name}</Text>
+                          {isMobile && room.unreadCount > 0 && (
+                            <Badge count={room.unreadCount} size="small" />
+                          )}
+                        </div>
+                      }
                       description={
-                        <Text ellipsis style={{ color: token.colorTextSecondary, fontSize: '12px' }}>
+                        <Text ellipsis style={{ color: token.colorTextSecondary, fontSize: isMobile ? '11px' : '12px' }}>
                           {room.lastMessage || '暂无消息'}
                         </Text>
                       }
@@ -185,7 +199,7 @@ export default function ChatHomePageContent() {
               }}
             />
           ) : (
-            <Empty description="暂无聊天室" image={Empty.PRESENTED_IMAGE_SIMPLE}>
+            <Empty description="暂无聊天室" image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ padding: '20px 0' }}>
               <Button 
                 type="primary" 
                 icon={<PlusOutlined />} 
@@ -205,11 +219,12 @@ export default function ChatHomePageContent() {
               <span>快速开始</span>
             </div>
           }
+          styles={{ body: { padding: isMobile ? '16px' : '24px' } }}
         >
-          <Space orientation="vertical" style={{ width: '100%' }} size="middle">
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr', gap: '12px' }}>
             <Button
               type="primary"
-              size="large"
+              size={isMobile ? 'middle' : 'large'}
               icon={<TeamOutlined />}
               block
               onClick={() => router.push('/chat/rooms')}
@@ -218,7 +233,7 @@ export default function ChatHomePageContent() {
             </Button>
             
             <Button
-              size="large"
+              size={isMobile ? 'middle' : 'large'}
               icon={<MessageOutlined />}
               block
               onClick={() => router.push('/chat/direct')}
@@ -227,7 +242,7 @@ export default function ChatHomePageContent() {
             </Button>
             
             <Button
-              size="large"
+              size={isMobile ? 'middle' : 'large'}
               icon={<ProfileOutlined />}
               block
               onClick={() => router.push('/chat/profile')}
@@ -236,14 +251,14 @@ export default function ChatHomePageContent() {
             </Button>
             
             <Button
-              size="large"
+              size={isMobile ? 'middle' : 'large'}
               icon={<SettingOutlined />}
               block
               onClick={() => router.push('/chat/settings')}
             >
               系统设置
             </Button>
-          </Space>
+          </div>
         </Card>
 
         {/* 最近消息 */}
@@ -255,12 +270,14 @@ export default function ChatHomePageContent() {
             </div>
           }
           style={{ gridColumn: '1 / -1' }}
+          styles={{ body: { padding: isMobile ? '8px' : '24px' } }}
           extra={
             messages.length > 3 && (
               <Button 
                 type="text" 
                 onClick={() => setMessagesExpanded(!messagesExpanded)}
                 icon={messagesExpanded ? <UpOutlined /> : <DownOutlined />}
+                size="small"
               >
                 {messagesExpanded ? '收起' : '展开'}
               </Button>
@@ -280,7 +297,7 @@ export default function ChatHomePageContent() {
                 renderItem={(msg) => (
                   <List.Item 
                     style={{ 
-                      padding: '12px',
+                      padding: isMobile ? '8px' : '12px',
                       marginBottom: '8px',
                       borderRadius: '8px',
                       backgroundColor: token.colorFillQuaternary,
@@ -291,30 +308,28 @@ export default function ChatHomePageContent() {
                       avatar={
                         <Avatar 
                           src={msg.senderAvatar} 
-                          size="large" 
+                          size={isMobile ? 'default' : 'large'} 
                           icon={<UserOutlined />}
                           style={{ backgroundColor: token.colorPrimary }}
                         />
                       }
                       title={
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <Text strong style={{ color: token.colorText }}>{msg.userName}</Text>
-                          <Text type="secondary" style={{ fontSize: '12px' }}>
-                            {new Date(msg.timestamp).toLocaleString()}
+                          <Text strong style={{ color: token.colorText, fontSize: isMobile ? '13px' : '14px' }}>{msg.userName}</Text>
+                          <Text type="secondary" style={{ fontSize: '10px' }}>
+                            {isMobile ? dayjs(msg.timestamp).format('HH:mm') : new Date(msg.timestamp).toLocaleString()}
                           </Text>
                         </div>
                       }
                       description={
                         <div style={{ marginTop: '4px' }}>
-                          <Text style={{ color: token.colorTextSecondary }}>
+                          <Text style={{ color: token.colorTextSecondary, fontSize: isMobile ? '12px' : '13px' }}>
                             {msg.content}
                           </Text>
                           <div style={{ marginTop: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <Tag color="blue" style={{ fontSize: '10px', lineHeight: '18px' }}>
+                            <Tag color="blue" style={{ fontSize: '9px', lineHeight: '16px' }}>
                               {msg.roomName || '未知群聊'}
                             </Tag>
-                            {msg.type === 'image' && <Tag icon={<MessageOutlined />}>图片</Tag>}
-                            {msg.type === 'file' && <Tag icon={<MessageOutlined />}>文件</Tag>}
                           </div>
                         </div>
                       }

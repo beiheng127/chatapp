@@ -18,7 +18,8 @@ import {
   Row,
   Col,
   Switch,
-  message
+  message,
+  Grid
 } from 'antd';
 import {
   TeamOutlined,
@@ -31,10 +32,11 @@ import {
 import { useAuthStore } from '@/store/authStore';
 import { roomService, type Room } from '@/services/roomService';
 import useSWR from 'swr';
+import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
-const { Search } = Input;
-const { TextArea } = Input;
+const { Search, TextArea } = Input;
+const { useBreakpoint } = Grid;
 
 interface CreateRoomForm {
   name: string;
@@ -50,6 +52,8 @@ export default function ChatRoomsPage() {
   const [searchText, setSearchText] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [form] = Form.useForm();
+  const screens = useBreakpoint();
+  const isMobile = !screens.md;
 
   // 使用 SWR 加载用户加入的群聊
   const { data: userRoomsData, mutate: mutateUserRooms, isLoading: loadingUserRooms } = useSWR(
@@ -146,19 +150,26 @@ export default function ChatRoomsPage() {
   return (
     <>
       {contextHolder}
-      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-          <Title level={2}>聊天室</Title>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: isMobile ? '0 4px' : '0' }}>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          marginBottom: isMobile ? '16px' : '24px',
+          flexDirection: isMobile ? 'row' : 'row'
+        }}>
+          <Title level={isMobile ? 3 : 2} style={{ margin: 0 }}>聊天室</Title>
           <Button
             type="primary"
             icon={<PlusOutlined />}
             onClick={() => setShowCreateModal(true)}
+            size={isMobile ? 'middle' : 'large'}
           >
-            创建聊天室
+            {isMobile ? '创建' : '创建聊天室'}
           </Button>
         </div>
 
-        <Card style={{ marginBottom: '24px' }}>
+        <Card style={{ marginBottom: isMobile ? '16px' : '24px' }} styles={{ body: { padding: isMobile ? '12px' : '24px' } }}>
           <Search
             placeholder="搜索聊天室..."
             prefix={<SearchOutlined />}
@@ -166,107 +177,115 @@ export default function ChatRoomsPage() {
             onChange={(e) => setSearchText(e.target.value)}
             onSearch={() => mutatePublicRooms()}
             allowClear
-            size="large"
+            size={isMobile ? 'middle' : 'large'}
           />
         </Card>
 
         {/* 用户已加入的群聊 */}
         {rooms.length > 0 && (
           <>
-            <Title level={4} style={{ marginBottom: '16px' }}>我的群聊</Title>
-            <List
-              loading={loading}
-              grid={{ gutter: 16, xs: 1, sm: 2, md: 2, lg: 3, xl: 4 }}
-              dataSource={rooms}
-              renderItem={(room) => (
-                <List.Item>
-                  <Card
-                    hoverable
-                    style={{ height: '100%' }}
-                    actions={[
-                      <Button 
-                        key="chat" 
-                        type="primary" 
-                        icon={<MessageOutlined />}
-                        onClick={() => router.push(`/chat/${room._id}`)}
+            <Title level={isMobile ? 5 : 4} style={{ marginBottom: isMobile ? '12px' : '16px' }}>我的群聊</Title>
+            <div style={{ marginBottom: isMobile ? '16px' : '24px' }}>
+              {loading ? (
+                <div style={{ padding: '40px', textAlign: 'center' }}><Skeleton active /></div>
+              ) : (
+                <Row gutter={[16, 16]}>
+                  {rooms.map((room: Room) => (
+                    <Col key={room._id} xs={24} sm={12} md={12} lg={8} xl={6}>
+                      <Card
+                        hoverable
+                        style={{ height: '100%' }}
+                        styles={{ body: { padding: isMobile ? '12px' : '24px' } }}
+                        actions={[
+                          <Button 
+                            key="chat" 
+                            type="primary" 
+                            icon={<MessageOutlined />}
+                            onClick={() => router.push(`/chat/${room._id}`)}
+                            size={isMobile ? 'middle' : 'middle'}
+                          >
+                            进入
+                          </Button>,
+                          <Button 
+                            key="leave" 
+                            danger 
+                            size={isMobile ? 'middle' : 'small'}
+                            onClick={() => leaveRoom(room._id)}
+                          >
+                            退出
+                          </Button>,
+                        ]}
                       >
-                        进入聊天
-                      </Button>,
-                      <Button 
-                        key="leave" 
-                        danger 
-                        size="small"
-                        onClick={() => leaveRoom(room._id)}
-                      >
-                        退出
-                      </Button>,
-                    ]}
-                  >
-                    <Card.Meta
-                      avatar={
-                        <Badge count={0} offset={[-10, 10]}>
-                          <Avatar 
-                            size="large" 
-                            src={room.avatar && !room.avatar.includes('default') ? room.avatar : undefined}
-                            icon={<TeamOutlined />}
-                            style={{ 
-                              backgroundColor: room.isPrivate ? '#ff4d4f' : '#1890ff' 
-                            }}
-                          />
-                        </Badge>
-                      }
-                      title={
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <Text strong style={{ color: 'var(--text-color)' }}>{room.name}</Text>
-                          {room.isPrivate && <LockOutlined style={{ color: '#ff4d4f' }} />}
-                        </div>
-                      }
-                      description={
-                        <div style={{ marginTop: '8px' }}>
-                          <Text type="secondary" style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
-                            {room.description || '暂无描述'}
-                          </Text>
-                          
-                          <Divider style={{ margin: '12px 0', borderColor: 'var(--border-color)' }} />
-                          
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--text-secondary)' }}>
-                            <div>
-                              <UserAddOutlined /> {room.memberCount}/{room.maxMembers}
+                        <Card.Meta
+                          avatar={
+                            <Badge count={0} offset={[-10, 10]}>
+                              <Avatar 
+                                size={isMobile ? 'default' : 'large'}
+                                src={room.avatar && !room.avatar.includes('default') ? room.avatar : undefined}
+                                icon={<TeamOutlined />}
+                                style={{ 
+                                  backgroundColor: room.isPrivate ? '#ff4d4f' : '#1890ff' 
+                                }}
+                              />
+                            </Badge>
+                          }
+                          title={
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <Text strong style={{ color: 'var(--text-color)', fontSize: isMobile ? '15px' : '16px' }}>{room.name}</Text>
+                              {room.isPrivate && <LockOutlined style={{ color: '#ff4d4f', fontSize: '14px' }} />}
                             </div>
-                            <div>
-                              创建于 {new Date(room.createdAt).toLocaleDateString()}
+                          }
+                          description={
+                            <div style={{ marginTop: '8px' }}>
+                              <Text type="secondary" style={{ fontSize: isMobile ? '13px' : '14px', color: 'var(--text-secondary)' }}>
+                                {room.description || '暂无描述'}
+                              </Text>
+                              
+                              <Divider style={{ margin: isMobile ? '8px 0' : '12px 0', borderColor: 'var(--border-color)' }} />
+                              
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: isMobile ? '11px' : '12px', color: 'var(--text-secondary)' }}>
+                                <div>
+                                  <UserAddOutlined /> {room.memberCount}/{room.maxMembers}
+                                </div>
+                                <div>
+                                  {isMobile ? dayjs(room.createdAt).format('MM-DD') : new Date(room.createdAt).toLocaleDateString()}
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                        </div>
-                      }
-                    />
-                  </Card>
-                </List.Item>
+                          }
+                        />
+                      </Card>
+                    </Col>
+                  ))}
+                </Row>
               )}
-            />
-            <Divider />
+            </div>
+            <Divider style={{ margin: isMobile ? '16px 0' : '24px 0' }} />
           </>
         )}
 
         {/* 公开群聊 */}
-        <Title level={4} style={{ marginBottom: '16px' }}>公开群聊</Title>
-        <List
-          loading={loading}
-          grid={{ gutter: 16, xs: 1, sm: 2, md: 2, lg: 3, xl: 4 }}
-          dataSource={publicRooms}
-          renderItem={(room) => (
-            <List.Item>
-              <Card
-                hoverable
-                style={{ height: '100%' }}
-                actions={[
+        <Title level={isMobile ? 5 : 4} style={{ marginBottom: isMobile ? '12px' : '16px' }}>公开群聊</Title>
+        <div style={{ marginBottom: isMobile ? '16px' : '24px' }}>
+          {loading ? (
+            <div style={{ padding: '40px', textAlign: 'center' }}><Skeleton active /></div>
+          ) : publicRooms.length > 0 ? (
+            <Row gutter={[16, 16]}>
+              {publicRooms.map((room: Room) => (
+                <Col key={room._id} xs={24} sm={12} md={12} lg={8} xl={6}>
+                  <Card
+                    hoverable
+                    style={{ height: '100%' }}
+                    styles={{ body: { padding: isMobile ? '12px' : '24px' } }}
+                    actions={[
                       <Button 
                         key="join" 
                         type="primary" 
                         icon={<MessageOutlined />}
                         onClick={() => joinRoom(room._id)}
+                        size={isMobile ? 'middle' : 'middle'}
                       >
-                        加入聊天
+                        加入
                       </Button>,
                       room.isPrivate && (
                         <LockOutlined key="lock" style={{ color: '#ff4d4f' }} />
@@ -276,7 +295,7 @@ export default function ChatRoomsPage() {
                     <Card.Meta
                       avatar={
                         <Avatar 
-                          size="large" 
+                          size={isMobile ? 'default' : 'large'}
                           src={room.avatar && !room.avatar.includes('default') ? room.avatar : undefined}
                           icon={<TeamOutlined />}
                           style={{ 
@@ -286,39 +305,42 @@ export default function ChatRoomsPage() {
                       }
                       title={
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <Text strong style={{ color: 'var(--text-color)' }}>{room.name}</Text>
-                          {room.isPrivate && <LockOutlined style={{ color: '#ff4d4f' }} />}
+                          <Text strong style={{ color: 'var(--text-color)', fontSize: isMobile ? '15px' : '16px' }}>{room.name}</Text>
+                          {room.isPrivate && <LockOutlined style={{ color: '#ff4d4f', fontSize: '14px' }} />}
                         </div>
                       }
                       description={
                         <div style={{ marginTop: '8px' }}>
-                          <Text type="secondary" style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
+                          <Text type="secondary" style={{ fontSize: isMobile ? '13px' : '14px', color: 'var(--text-secondary)' }}>
                             {room.description || '暂无描述'}
                           </Text>
                           
-                          <Divider style={{ margin: '12px 0', borderColor: 'var(--border-color)' }} />
+                          <Divider style={{ margin: isMobile ? '8px 0' : '12px 0', borderColor: 'var(--border-color)' }} />
                           
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '12px' }}>
-                            <Tag color="blue">{room.type === 'group' ? '群聊' : '频道'}</Tag>
-                            {room.isPrivate && <Tag color="red">私密</Tag>}
+                            <Tag color="blue" style={{ fontSize: '11px' }}>{room.type === 'group' ? '群聊' : '频道'}</Tag>
+                            {room.isPrivate && <Tag color="red" style={{ fontSize: '11px' }}>私密</Tag>}
                           </div>
                           
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: isMobile ? '11px' : '12px', color: 'var(--text-secondary)' }}>
                             <div>
                               <UserAddOutlined /> {room.memberCount}/{room.maxMembers}
                             </div>
                             <div>
-                              创建于 {new Date(room.createdAt).toLocaleDateString()}
+                              {isMobile ? dayjs(room.createdAt).format('MM-DD') : new Date(room.createdAt).toLocaleDateString()}
                             </div>
                           </div>
                         </div>
                       }
                     />
                   </Card>
-                </List.Item>
-              )}
-          locale={{ emptyText: '暂无聊天室' }}
-        />
+                </Col>
+              ))}
+            </Row>
+          ) : (
+            <Empty description="暂无聊天室" />
+          )}
+        </div>
 
         {/* 创建聊天室模态框 */}
         <Modal
@@ -326,7 +348,7 @@ export default function ChatRoomsPage() {
           open={showCreateModal}
           onCancel={() => setShowCreateModal(false)}
           footer={null}
-          width={600}
+          width={isMobile ? '95%' : 600}
           destroyOnHidden
           maskClosable={false}
           centered
@@ -364,37 +386,40 @@ export default function ChatRoomsPage() {
               />
             </Form.Item>
 
-            <Row gutter={16}>
-              <Col span={12}>
+            <Row gutter={isMobile ? 0 : 16}>
+              <Col span={isMobile ? 24 : 12}>
                 <Form.Item
                   label="聊天室类型"
                   name="type"
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Tag color="blue">群聊</Tag>
-                    <Text type="secondary">多人聊天室</Text>
+                    <Text type="secondary" style={{ fontSize: '12px' }}>多人聊天室</Text>
                   </div>
                 </Form.Item>
               </Col>
-              <Col span={12}>
+              <Col span={isMobile ? 24 : 12}>
                 <Form.Item
                   label="隐私设置"
                   name="isPrivate"
                   valuePropName="checked"
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Switch checkedChildren="私密" unCheckedChildren="公开" onChange={(checked) => {form.setFieldsValue({ isPrivate: checked });}}/>
-                     <Text type="secondary">
+                  <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Switch checkedChildren="私密" unCheckedChildren="公开" onChange={(checked) => {form.setFieldsValue({ isPrivate: checked });}}/>
+                      <Text strong>{form.getFieldValue('isPrivate') ? '私密' : '公开'}</Text>
+                    </div>
+                     <Text type="secondary" style={{ fontSize: '11px' }}>
                       {form.getFieldValue('isPrivate') 
-                        ? '私密房间需要邀请才能加入' 
-                        : '公开房间，所有用户都可以搜索并加入'}
+                        ? '需要邀请加入' 
+                        : '公开搜索并加入'}
                     </Text>
                   </div>
                 </Form.Item>
               </Col>
             </Row>
 
-            <Divider />
+            <Divider style={{ margin: isMobile ? '12px 0' : '24px 0' }} />
 
             <div style={{ textAlign: 'right' }}>
               <Button onClick={() => setShowCreateModal(false)} style={{ marginRight: '8px' }}>

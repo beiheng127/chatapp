@@ -23,6 +23,7 @@ import {
   Tag,
   FloatButton,
   theme,
+  Grid,
 } from 'antd';
 import { 
   UserOutlined, 
@@ -39,7 +40,8 @@ import {
   DownloadOutlined,
   EyeOutlined,
   ReloadOutlined,
-  DownOutlined
+  DownOutlined,
+  ArrowLeftOutlined
 } from '@ant-design/icons';
 import { useAuthStore } from '@/store/authStore';
 import { useChatStore, type Message } from '@/store/chatStore';
@@ -55,6 +57,7 @@ dayjs.locale('zh-cn');
 
 const { Title, Text } = Typography;
 const { Search, TextArea } = Input;
+const { useBreakpoint } = Grid;
 
 interface FileAttachment {
   id: string;
@@ -95,6 +98,9 @@ export default function DirectChatPage() {
   });
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const [containerHeight, setContainerHeight] = useState(0);
+  const screens = useBreakpoint();
+  const isMobile = !screens.md;
+  const [showChatOnMobile, setShowChatOnMobile] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -220,6 +226,7 @@ export default function DirectChatPage() {
       
       if (existingConversation) {
         setActiveChat(userId);
+        if (isMobile) setShowChatOnMobile(true);
         clearMessages(); // 清除之前的消息
         await loadMessages(userId);
       } else {
@@ -235,6 +242,7 @@ export default function DirectChatPage() {
           };
           setConversations(prev => [newConversation, ...prev]);
           setActiveChat(userId);
+          if (isMobile) setShowChatOnMobile(true);
           clearMessages();
         }
       }
@@ -809,7 +817,7 @@ export default function DirectChatPage() {
         onCancel={() => setPreviewImage({ visible: false, url: '' })}
         width="auto"
         centered
-        destroyOnClose
+        destroyOnHidden
       >
         <Image
           src={previewImage.url}
@@ -818,37 +826,36 @@ export default function DirectChatPage() {
         />
       </Modal>
       
-      <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '20px' }}>
-        <Title level={2}>私聊</Title>
+      <div style={{ maxWidth: '1400px', margin: '0 auto', padding: isMobile ? '8px' : '20px' }}>
+        <Title level={isMobile ? 3 : 2}>私聊</Title>
         
-        <div style={{ display: 'flex', gap: '24px', height: containerHeight || 'calc(100vh - 180px)' }}>
-          {/* 左侧：对话列表 */}
-          <Card
-            title={
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>对话列表</span>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <Button 
-                    type="primary" 
-                    size="small" 
-                    icon={<PlusOutlined />} 
-                    onClick={() => setShowUserSearch(true)}
-                  >
-                    新对话
-                  </Button>
-                  <Button 
-                    size="small"
-                    icon={<ReloadOutlined />}
-                    onClick={loadConversations}
-                  >
-                    刷新
-                  </Button>
+        <div style={{ display: 'flex', gap: isMobile ? '0' : '24px', height: containerHeight || (isMobile ? 'calc(100vh - 200px)' : 'calc(100vh - 180px)') }}>
+          {/* 左侧：对话列表 (移动端根据状态显示) */}
+          {(!isMobile || !showChatOnMobile) && (
+            <Card
+              title={
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>对话列表</span>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <Button 
+                      type="primary" 
+                      size="small" 
+                      icon={<PlusOutlined />} 
+                      onClick={() => setShowUserSearch(true)}
+                    >
+                      {isMobile ? '' : '新对话'}
+                    </Button>
+                    <Button 
+                      size="small"
+                      icon={<ReloadOutlined />}
+                      onClick={loadConversations}
+                    />
+                  </div>
                 </div>
-              </div>
-            }
-            style={{ width: '350px' }}
-            bodyStyle={{ padding: 0, height: '100%', display: 'flex', flexDirection: 'column' }}
-          >
+              }
+              style={{ width: isMobile ? '100%' : '350px' }}
+              styles={{ body: { padding: 0, height: '100%', display: 'flex', flexDirection: 'column' } }}
+            >
             <div style={{ padding: '16px' }}>
               <Search
                 placeholder="搜索对话..."
@@ -938,303 +945,319 @@ export default function DirectChatPage() {
               )}
             </div>
           </Card>
+          )}
 
-          {/* 右侧：聊天区域 */}
-          <Card
-            style={{ flex: 1, height: '100%' }}
-            title={
-              activeConversation ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <Avatar src={activeConversation.avatar} size="small" />
-                  <div>
-                    <Text strong>{activeConversation.username}</Text>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
-                      <Text type="secondary" style={{ fontSize: '12px' }}>
-                        {activeConversation.unreadCount > 0 
-                          ? `${activeConversation.unreadCount}条未读消息` 
-                          : '在线'}
-                      </Text>
+          {/* 右侧：聊天区域 (移动端根据状态显示) */}
+          {(!isMobile || showChatOnMobile) && (
+            <Card
+              style={{ flex: 1, height: '100%' }}
+              title={
+                activeConversation ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    {isMobile && (
+                      <Button 
+                        type="text" 
+                        icon={<ArrowLeftOutlined />} 
+                        onClick={() => setShowChatOnMobile(false)}
+                        style={{ padding: '0 4px' }}
+                      />
+                    )}
+                    <Avatar src={activeConversation.avatar} size="small" />
+                    <div>
+                      <Text strong>{activeConversation.username}</Text>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+                        <Text type="secondary" style={{ fontSize: '11px' }}>
+                          {activeConversation.unreadCount > 0 
+                            ? `${activeConversation.unreadCount}条未读消息` 
+                            : '在线'}
+                        </Text>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ) : (
-                '选择对话开始聊天'
-              )
-            }
-            extra={
-              activeChat && (
-                <Button 
-                  type="text" 
-                  icon={<ReloadOutlined />}
-                  onClick={() => loadMessages(activeChat)}
-                  loading={loading}
-                >
-                  刷新
-                </Button>
-              )
-            }
-            bodyStyle={{ 
-              padding: 0, 
-              height: '100%', 
-              display: 'flex', 
-              flexDirection: 'column',
-              position: 'relative'
-            }}
-          >
-            {activeConversation ? (
-              <>
-                {/* 消息列表容器 */}
-                <div 
-                  ref={messagesContainerRef}
-                  style={{ 
-                    flex: 1,
-                    overflowY: 'auto',
-                    padding: '16px',
-                    position: 'relative'
-                  }}
-                  onScroll={handleScroll}
-                >
-                  {/* 加载更多指示器 */}
-                  {loadingMoreMessages && (
-                    <div style={{ textAlign: 'center', padding: '16px' }}>
-                      <LoadingOutlined />
-                      <Text type="secondary"> 加载历史消息...</Text>
-                    </div>
-                  )}
-                  
-                  {loading ? (
-                    <div style={{ padding: '40px', textAlign: 'center' }}>
-                      <Skeleton active paragraph={{ rows: 3 }} />
-                    </div>
-                  ) : hasMessages ? (
-                    <>
-                      {/* 消息内容 - 按日期分组 */}
-                      {Object.entries(groupedMessages).map(([date, dateMessages]) => (
+                ) : (
+                  '选择对话开始聊天'
+                )
+              }
+              extra={
+                activeChat && (
+                  <Button 
+                    type="text" 
+                    icon={<ReloadOutlined />}
+                    onClick={() => loadMessages(activeChat)}
+                    loading={loading}
+                    size="small"
+                  >
+                    {!isMobile && '刷新'}
+                  </Button>
+                )
+              }
+              styles={{ body: { 
+                padding: 0, 
+                height: '100%', 
+                display: 'flex', 
+                flexDirection: 'column',
+                position: 'relative'
+              } }}
+            >
+              {activeConversation ? (
+                <>
+                  {/* 消息列表容器 */}
+                  <div 
+                    ref={messagesContainerRef}
+                    style={{ 
+                      flex: 1,
+                      overflowY: 'auto',
+                      padding: isMobile ? '12px' : '16px',
+                      position: 'relative'
+                    }}
+                    onScroll={handleScroll}
+                  >
+                    {/* 加载更多指示器 */}
+                    {loadingMoreMessages && (
+                      <div style={{ textAlign: 'center', padding: '16px' }}>
+                        <LoadingOutlined />
+                      </div>
+                    )}
+                    
+                    {hasMessages ? (
+                      Object.entries(groupedMessages).map(([date, dateMessages]) => (
                         <div key={date}>
-                          <Divider>
-                            <Tag color="blue">
+                          <Divider plain style={{ margin: '12px 0' }}>
+                            <Tag color="default" style={{ fontSize: '10px' }}>
                               {formatDateTitle(date)}
                             </Tag>
                           </Divider>
                           
-                          {dateMessages.map((msg) => (
-                            <div
-                              key={msg.id}
-                              style={{
-                                display: 'flex',
-                                justifyContent: msg.userId === user.id ? 'flex-end' : 'flex-start',
-                                marginBottom: '16px',
-                              }}
-                            >
+                          {dateMessages.map((msg) => {
+                            const isOwn = msg.userId === user.id;
+                            const isFailed = msg.status === 'failed';
+                            
+                            return (
                               <div
+                                key={msg.id}
                                 style={{
-                                  maxWidth: '70%',
                                   display: 'flex',
-                                  flexDirection: 'column',
-                                  alignItems: msg.userId === user.id ? 'flex-end' : 'flex-start',
+                                  justifyContent: isOwn ? 'flex-end' : 'flex-start',
+                                  marginBottom: isMobile ? '12px' : '16px',
+                                  alignItems: 'flex-start'
                                 }}
                               >
-                                {msg.userId !== user.id && (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                                    <Avatar size="small" src={msg.senderAvatar} />
-                                    <Text type="secondary">{msg.userName}</Text>
-                                  </div>
+                                {!isOwn && (
+                                  <Avatar 
+                                    src={msg.senderAvatar} 
+                                    size={isMobile ? 'small' : 'default'}
+                                    style={{ marginRight: '8px', flexShrink: 0 }} 
+                                  />
                                 )}
                                 
-                                <div
-                                  style={{
-                                    background: msg.userId === user.id ? token.colorPrimary : token.colorFillSecondary,
-                                    color: msg.userId === user.id ? '#fff' : token.colorText,
-                                    border: 'none',
-                                    borderRadius: '12px',
-                                    padding: '12px',
-                                    maxWidth: '100%',
-                                    position: 'relative',
-                                    wordBreak: 'break-word'
-                                  }}
-                                >
-                                  {renderMessageContent(msg)}
-                                  
-                                  {/* 消息状态指示器 */}
-                                  {msg.userId === user.id && (
-                                    <div style={{ position: 'absolute', right: '-15px', top: '50%', transform: 'translateY(-50%)' }}>
-                                      {msg.status === 'sending' && (
-                                        <Tooltip title="发送中">
-                                          <LoadingOutlined style={{ color: '#999' }} />
-                                        </Tooltip>
-                                      )}
+                                <div style={{ maxWidth: isMobile ? '85%' : '70%', minWidth: 0 }}>
+                                  <div style={{ 
+                                    display: 'flex', 
+                                    flexDirection: isOwn ? 'row-reverse' : 'row',
+                                    alignItems: 'flex-start',
+                                    width: '100%'
+                                  }}>
+                                    <div
+                                      style={{
+                                        background: isOwn ? token.colorPrimary : token.colorFillAlter,
+                                        borderRadius: '12px',
+                                        padding: isMobile ? '8px 10px' : '12px',
+                                        position: 'relative',
+                                        wordBreak: 'break-word',
+                                        color: isOwn ? '#fff' : token.colorText,
+                                        border: isFailed ? '1px solid #ff4d4f' : 'none',
+                                        fontSize: isMobile ? '14px' : '14px'
+                                      }}
+                                    >
+                                      {renderMessageContent(msg)}
                                       
-                                      {msg.status === 'failed' && (
-                                        <Tooltip title="发送失败，点击重试">
-                                          <ExclamationCircleOutlined 
-                                            style={{ color: '#ff4d4f', cursor: 'pointer' }} 
-                                            onClick={() => retrySendMessage(msg.id, msg.content, msg.type, msg.fileInfo)}
-                                          />
-                                        </Tooltip>
-                                      )}
-                                      
-                                      {msg.status === 'sent' && (
-                                        <Tooltip title="已发送">
-                                          <CheckCircleOutlined style={{ color: '#999' }} />
-                                        </Tooltip>
-                                      )}
-                                      
-                                      {msg.status === 'read' && (
-                                        <Tooltip title="已读">
-                                          <CheckCircleOutlined style={{ color: '#52c41a' }} />
-                                        </Tooltip>
+                                      {/* 消息状态指示器 */}
+                                      {isOwn && (
+                                        <div style={{ position: 'absolute', right: '-20px', top: '50%', transform: 'translateY(-50%)' }}>
+                                          {msg.status === 'sending' && <LoadingOutlined style={{ color: '#1890ff', fontSize: '12px' }} />}
+                                          {msg.status === 'failed' && (
+                                            <Tooltip title="发送失败，点击重试">
+                                              <ExclamationCircleOutlined 
+                                                style={{ color: '#ff4d4f', cursor: 'pointer', fontSize: '12px' }} 
+                                                onClick={() => retrySendMessage(msg.id, msg.content, msg.type as any, msg.fileInfo)}
+                                              />
+                                            </Tooltip>
+                                          )}
+                                          {msg.status === 'read' && <CheckCircleOutlined style={{ color: '#52c41a', fontSize: '12px' }} />}
+                                          {msg.status === 'sent' && <CheckCircleOutlined style={{ color: '#999', fontSize: '12px' }} />}
+                                        </div>
                                       )}
                                     </div>
-                                  )}
+                                    
+                                    {isOwn && (
+                                      <Avatar 
+                                        src={user.avatar} 
+                                        size="small"
+                                        style={{ marginLeft: '8px', flexShrink: 0 }} 
+                                      />
+                                    )}
+                                  </div>
+                                  <Text
+                                    type="secondary"
+                                    style={{
+                                      fontSize: '10px',
+                                      marginTop: '4px',
+                                      display: 'block',
+                                      textAlign: isOwn ? 'right' : 'left',
+                                      marginRight: isOwn ? '8px' : '0',
+                                      marginLeft: !isOwn ? '8px' : '0'
+                                    }}
+                                  >
+                                    {dayjs(msg.timestamp).format('HH:mm')}
+                                  </Text>
                                 </div>
-                                
-                                <Text type="secondary" style={{ fontSize: '12px', marginTop: '4px' }}>
-                                  {dayjs(msg.timestamp).format('HH:mm')}
-                                </Text>
                               </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
-                      ))}
-                      
-                      {/* 滚动到底部锚点 */}
-                      <div ref={messagesEndRef} />
-                    </>
-                  ) : (
-                    <Empty description="还没有消息，开始聊天吧！" style={{ marginTop: '100px' }} />
-                  )}
-                </div>
-                
-                {/* 附件预览 */}
-                {fileAttachments.length > 0 && (
-                  <div style={{ padding: '8px 16px', borderBottom: '1px solid #f0f0f0' }}>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                      {fileAttachments.map((attachment) => (
-                        <div
-                          key={attachment.id}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            background: '#f5f5f5',
-                            borderRadius: '6px',
-                            padding: '8px',
-                            maxWidth: '300px'
-                          }}
-                        >
-                          {attachment.type.startsWith('image/') ? (
-                            <PictureOutlined style={{ marginRight: '8px', color: '#1890ff' }} />
-                          ) : (
-                            <FileOutlined style={{ marginRight: '8px', color: '#52c41a' }} />
-                          )}
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <Text ellipsis style={{ fontSize: '12px' }}>
-                              {attachment.name}
-                            </Text>
-                            <Text type="secondary" style={{ fontSize: '11px' }}>
-                              {directMessageService.formatFileSize(attachment.size)}
-                            </Text>
-                            {attachment.status === 'uploading' && (
-                              <Progress percent={attachment.progress} size="small" />
-                            )}
-                          </div>
-                          <Button
-                            type="text"
-                            size="small"
-                            icon={<DeleteOutlined />}
-                            onClick={() => removeAttachment(attachment.id)}
-                            style={{ color: '#ff4d4f' }}
-                          />
-                        </div>
-                      ))}
-                    </div>
+                      ))
+                    ) : (
+                      <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Empty description="还没有消息，发送第一条消息开始聊天吧！" />
+                      </div>
+                    )}
+                    
+                    <div ref={messagesEndRef} />
                   </div>
-                )}
+                
+                  {/* 附件预览 */}
+                  {fileAttachments.length > 0 && (
+                    <div style={{ padding: isMobile ? '8px 12px' : '8px 16px', borderTop: `1px solid ${token.colorBorderSecondary}`, background: token.colorBgContainer }}>
+                      <div style={{ display: 'flex', flexWrap: 'nowrap', overflowX: 'auto', gap: '8px', paddingBottom: '4px' }}>
+                        {fileAttachments.map((attachment) => (
+                          <div
+                            key={attachment.id}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              background: token.colorFillAlter,
+                              borderRadius: '6px',
+                              padding: '6px 8px',
+                              minWidth: '150px',
+                              maxWidth: '200px',
+                              flexShrink: 0
+                            }}
+                          >
+                            {attachment.type.startsWith('image/') ? (
+                              <PictureOutlined style={{ marginRight: '8px', color: '#1890ff' }} />
+                            ) : (
+                              <FileOutlined style={{ marginRight: '8px', color: '#52c41a' }} />
+                            )}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <Text ellipsis style={{ fontSize: '11px' }}>
+                                {attachment.name}
+                              </Text>
+                              {attachment.status === 'uploading' && (
+                                <Progress percent={attachment.progress} size="small" showInfo={false} />
+                              )}
+                            </div>
+                            <Button
+                              type="text"
+                              size="small"
+                              icon={<DeleteOutlined style={{ fontSize: '12px' }} />}
+                              onClick={() => removeAttachment(attachment.id)}
+                              style={{ color: '#ff4d4f', padding: '0 4px' }}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
-                {/* 消息输入 */}
-                <div style={{ padding: '16px', borderTop: '1px solid var(--border-color)' }}>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <Space.Compact style={{ width: '100%' }}>
-                      <Button
-                        type="text"
-                        icon={<PictureOutlined />}
-                        onClick={() => triggerFileInput('image')}
-                        title="发送图片"
-                        disabled={isSending}
-                      />
-                      <Button
-                        type="text"
-                        icon={<PaperClipOutlined />}
-                        onClick={() => triggerFileInput('file')}
-                        title="发送文件"
-                        disabled={isSending}
-                      />
-                      
-                      {/* 隐藏的文件输入 */}
-                      <input
-                        type="file"
-                        ref={imageInputRef}
-                        style={{ display: 'none' }}
-                        accept="image/*"
-                        multiple
-                        onChange={(e) => handleFileSelect(e, 'image')}
-                      />
-                      <input
-                        type="file"
-                        ref={fileInputRef}
-                        style={{ display: 'none' }}
-                        multiple
-                        onChange={(e) => handleFileSelect(e, 'file')}
-                      />
+                  {/* 消息输入区域 */}
+                  <div style={{ padding: isMobile ? '12px' : '16px', borderTop: `1px solid ${token.colorBorderSecondary}`, background: token.colorBgContainer }}>
+                    <div style={{ display: 'flex', gap: isMobile ? '4px' : '8px', alignItems: 'flex-end' }}>
+                      <div style={{ display: 'flex', gap: isMobile ? '0' : '4px' }}>
+                        <Button 
+                          type="text" 
+                          icon={<PictureOutlined />}
+                          onClick={() => triggerFileInput('image')}
+                          disabled={isSending}
+                          size={isMobile ? 'small' : 'middle'}
+                        />
+                        <Button 
+                          type="text" 
+                          icon={<PaperClipOutlined />}
+                          onClick={() => triggerFileInput('file')}
+                          disabled={isSending}
+                          size={isMobile ? 'small' : 'middle'}
+                        />
+                        
+                        {/* 隐藏的文件输入 */}
+                        <input
+                          type="file"
+                          ref={imageInputRef}
+                          style={{ display: 'none' }}
+                          accept="image/*"
+                          multiple
+                          onChange={(e) => handleFileSelect(e, 'image')}
+                        />
+                        <input
+                          type="file"
+                          ref={fileInputRef}
+                          style={{ display: 'none' }}
+                          multiple
+                          onChange={(e) => handleFileSelect(e, 'file')}
+                        />
+                      </div>
                       
                       <TextArea
-                        placeholder="输入消息..."
                         value={messageInput}
                         onChange={(e) => setMessageInput(e.target.value)}
+                        placeholder={isMobile ? "消息..." : "输入消息..."}
                         autoSize={{ minRows: 1, maxRows: 4 }}
+                        style={{ flex: 1, fontSize: isMobile ? '14px' : '14px' }}
+                        disabled={isSending}
                         onPressEnter={(e) => {
-                          if (!e.shiftKey) {
+                          if (!e.shiftKey && !isSending) {
                             e.preventDefault();
                             sendMessage();
                           }
                         }}
-                        style={{ flex: 1 }}
-                        disabled={isSending}
                       />
                       
-                      <Button 
-                        type="primary" 
+                      <Button
+                        type="primary"
                         icon={<SendOutlined />}
                         onClick={sendMessage}
                         disabled={(!messageInput.trim() && fileAttachments.length === 0) || isSending}
                         loading={isSending}
+                        style={{ height: isMobile ? '32px' : '40px' }}
                       >
-                        发送
+                        {!isMobile && '发送'}
                       </Button>
-                    </Space.Compact>
+                    </div>
                   </div>
-                </div>
-                
-                {/* 浮动滚动到底部按钮 */}
-                {showScrollToBottom && (
-                  <FloatButton
-                    icon={<DownOutlined />}
-                    onClick={scrollToBottom}
-                    type="primary"
-                    style={{
-                      right: 24,
-                      bottom: 100
-                    }}
+                </>
+              ) : (
+                <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Empty 
+                    description="从左侧选择或开始一个新的对话" 
+                    style={{ marginTop: isMobile ? '50px' : '100px' }} 
                   />
-                )}
-              </>
-            ) : (
-              <Empty
-                description="从左侧选择或开始一个新的对话"
-                style={{ marginTop: '100px' }}
-              />
-            )}
-          </Card>
+                </div>
+              )}
+            </Card>
+          )}
         </div>
+        
+        {/* 浮动滚动到底部按钮 (移动端调小一点) */}
+        {showScrollToBottom && showChatOnMobile && (
+          <FloatButton
+            icon={<DownOutlined />}
+            onClick={scrollToBottom}
+            type="primary"
+            style={{
+              right: isMobile ? 12 : 24,
+              bottom: isMobile ? 80 : 100
+            }}
+          />
+        )}
       </div>
 
       {/* 选择用户开始新对话的模态框 */}
@@ -1248,7 +1271,7 @@ export default function DirectChatPage() {
         }}
         footer={null}
         width={500}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={form} layout="vertical">
           <Form.Item label="搜索用户" name="search">

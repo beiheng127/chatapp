@@ -1,7 +1,7 @@
 // app/(chat)/[roomId]/page.tsx
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   Card,
@@ -25,6 +25,7 @@ import {
   Badge,
   Spin,
   theme,
+  Grid,
 } from 'antd';
 import {
   SendOutlined,
@@ -63,6 +64,7 @@ dayjs.locale('zh-cn');
 
 const { TextArea } = Input;
 const { Title, Text } = Typography;
+const { useBreakpoint } = Grid;
 
 // 文件附件接口
 interface FileAttachment {
@@ -122,6 +124,8 @@ export default function ChatRoomPage() {
     sendChatMessage: wsSendMessage, 
     isConnected 
   } = useWebSocket();
+  const screens = useBreakpoint();
+  const isMobile = !screens.md;
 
   // 按日期分组消息
   const getGroupedMessages = useCallback((): DateGroupedMessages => {
@@ -769,8 +773,8 @@ export default function ChatRoomPage() {
     },
   ];
 
-  // 初始化
-  useEffect(() => {
+  // 初始化布局和加载数据
+  useLayoutEffect(() => {
     if (!roomId) return;
 
     const init = async () => {
@@ -794,18 +798,19 @@ export default function ChatRoomPage() {
     }
   }, [roomId]);
 
-  // 初始加载完成后自动滚动到底部
-  useEffect(() => {
+  // 当加载完成且消息准备好时，在浏览器重绘前立即滚动到底部
+  useLayoutEffect(() => {
     if (!loading && messages.length > 0) {
-      // 增加多次尝试，确保虚拟列表完全渲染
-      const timer1 = setTimeout(() => scrollToBottom(), 100);
-      const timer2 = setTimeout(() => scrollToBottom(), 500);
-      const timer3 = setTimeout(() => scrollToBottom(), 1000);
+      // 在浏览器下一次重绘之前同步执行滚动，减少视觉上的跳跃感
+      scrollToBottom();
+      
+      // 考虑到虚拟列表可能有复杂的异步高度计算，保留后续的微调
+      const timer1 = setTimeout(() => scrollToBottom(), 500);
+      const timer2 = setTimeout(() => scrollToBottom(), 1000);
       
       return () => {
         clearTimeout(timer1);
         clearTimeout(timer2);
-        clearTimeout(timer3);
       };
     }
   }, [loading, roomId]); // 当加载状态改变或切换房间时触发
@@ -950,7 +955,7 @@ export default function ChatRoomPage() {
         onCancel={() => setPreviewImage({ visible: false, url: '' })}
         width="auto"
         centered
-        destroyOnClose
+        destroyOnHidden
       >
         <Image
           src={previewImage.url}
@@ -969,7 +974,7 @@ export default function ChatRoomPage() {
           setSearchResults([]);
         }}
         footer={null}
-        width={600}
+        width={isMobile ? '95%' : 600}
       >
         <div style={{ marginBottom: '16px' }}>
           <Space.Compact style={{ width: '100%' }}>
@@ -1027,60 +1032,68 @@ export default function ChatRoomPage() {
         ) : null}
       </Modal>
       
-      <div style={{ height: 'calc(90vh - 64px)', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ height: isMobile ? 'calc(100vh - 128px)' : 'calc(90vh - 64px)', display: 'flex', flexDirection: 'column' }}>
         {/* 群聊头部 */}
         <div style={{ 
-          padding: '16px 24px', 
+          padding: isMobile ? '12px 16px' : '16px 24px', 
           background: token.colorBgContainer, 
           borderBottom: `1px solid ${token.colorBorder}`,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '12px', minWidth: 0 }}>
             <Avatar 
-              size="large" 
+              size={isMobile ? 'default' : 'large'}
               src={room.avatar && !room.avatar.includes('default') ? room.avatar : undefined}
               icon={<TeamOutlined />}
-              style={{ backgroundColor: room.isPrivate ? '#ff4d4f' : '#1890ff' }}
+              style={{ backgroundColor: room.isPrivate ? '#ff4d4f' : '#1890ff', flexShrink: 0 }}
             />
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Title level={4} style={{ margin: 0, color: token.colorText }}>{room.name}</Title>
-                {room.isPrivate ? (
-                  <Tooltip title="私密群聊">
-                    <Tag color="red">私密</Tag>
-                  </Tooltip>
-                ) : (
-                  <Tooltip title="公开群聊">
-                    <Tag color="blue">公开</Tag>
-                  </Tooltip>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'nowrap' }}>
+                <Title level={isMobile ? 5 : 4} style={{ margin: 0, color: token.colorText, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {room.name}
+                </Title>
+                {!isMobile && (
+                  <>
+                    {room.isPrivate ? (
+                      <Tooltip title="私密群聊">
+                        <Tag color="red">私密</Tag>
+                      </Tooltip>
+                    ) : (
+                      <Tooltip title="公开群聊">
+                        <Tag color="blue">公开</Tag>
+                      </Tooltip>
+                    )}
+                  </>
                 )}
                 {isConnected && (
                   <Tooltip title="WebSocket已连接">
-                    <Badge status="success" text={<span style={{ color: token.colorTextSecondary }}>在线</span>} />
+                    <Badge status="success" text={!isMobile && <span style={{ color: token.colorTextSecondary }}>在线</span>} />
                   </Tooltip>
                 )}
               </div>
-              <Text type="secondary" style={{ color: token.colorTextSecondary }}>
+              <Text type="secondary" style={{ color: token.colorTextSecondary, fontSize: isMobile ? '11px' : '12px' }}>
                 {room.memberCount || room.members?.length || 0} 名成员
               </Text>
             </div>
           </div>
           
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {/* 自动刷新设置 */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Tooltip title={`自动刷新: ${autoRefresh ? '开启' : '关闭'}`}>
-                <Tag 
-                  color={autoRefresh ? 'green' : 'default'}
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => setAutoRefresh(!autoRefresh)}
-                >
-                  <ClockCircleOutlined /> {refreshRate}秒
-                </Tag>
-              </Tooltip>
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '12px' }}>
+            {/* 自动刷新设置 (移动端隐藏) */}
+            {!isMobile && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Tooltip title={`自动刷新: ${autoRefresh ? '开启' : '关闭'}`}>
+                  <Tag 
+                    color={autoRefresh ? 'green' : 'default'}
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => setAutoRefresh(!autoRefresh)}
+                  >
+                    <ClockCircleOutlined /> {refreshRate}秒
+                  </Tag>
+                </Tooltip>
+              </div>
+            )}
             
             <Dropdown menu={{ items: moreActions }} placement="bottomRight">
               <Button type="text" icon={<MoreOutlined style={{ color: token.colorText }} />} />
@@ -1105,7 +1118,7 @@ export default function ChatRoomPage() {
           ) : hasMessages ? (
             <VirtualList
               data={flatMessages}
-              height={containerHeight || 600}
+              height={containerHeight || (isMobile ? 500 : 600)}
               itemHeight={100} // 估算平均高度
               itemKey="_id"
               onScroll={handleScroll}
@@ -1114,9 +1127,9 @@ export default function ChatRoomPage() {
               {(msg: any) => {
                 if (msg._isDivider) {
                   return (
-                    <div key={msg._id} style={{ padding: '0 24px' }}>
+                    <div key={msg._id} style={{ padding: isMobile ? '0 12px' : '0 24px' }}>
                       <Divider>
-                        <Tag color="blue">
+                        <Tag color="blue" style={{ fontSize: isMobile ? '11px' : '12px' }}>
                           {formatDateTitle(msg.date)}
                         </Tag>
                       </Divider>
@@ -1133,21 +1146,22 @@ export default function ChatRoomPage() {
                     style={{
                       display: 'flex',
                       justifyContent: isOwn ? 'flex-end' : 'flex-start',
-                      marginBottom: '16px',
-                      padding: '0 24px',
+                      marginBottom: isMobile ? '12px' : '16px',
+                      padding: isMobile ? '0 12px' : '0 24px',
                       alignItems: 'flex-start'
                     }}
                   >
                     {!isOwn && (
                       <Avatar 
                         src={msg.sender?.avatar} 
-                        style={{ marginRight: '8px', alignSelf: 'flex-start', flexShrink: 0 }} 
+                        size={isMobile ? 'small' : 'default'}
+                        style={{ marginRight: isMobile ? '6px' : '8px', alignSelf: 'flex-start', flexShrink: 0 }} 
                       />
                     )}
                     
-                    <div style={{ maxWidth: '70%', minWidth: 0 }}>
+                    <div style={{ maxWidth: isMobile ? '85%' : '70%', minWidth: 0 }}>
                       {!isOwn && (
-                        <Text strong style={{ marginLeft: '8px', fontSize: '12px' }}>
+                        <Text strong style={{ marginLeft: isMobile ? '4px' : '8px', fontSize: isMobile ? '11px' : '12px' }}>
                           {msg.sender?.username}
                         </Text>
                       )}
@@ -1163,22 +1177,23 @@ export default function ChatRoomPage() {
                             background: isFailed ? '#fff2f0' : (isOwn ? token.colorPrimary : token.colorFillAlter),
                             border: isFailed ? '1px solid #ffccc7' : 'none',
                             borderRadius: '12px',
-                            padding: '12px',
+                            padding: isMobile ? '8px 10px' : '12px',
                             maxWidth: '100%',
                             position: 'relative',
                             wordBreak: 'break-word',
-                            color: isOwn ? '#fff' : token.colorText
+                            color: isOwn ? '#fff' : token.colorText,
+                            fontSize: isMobile ? '14px' : '14px'
                           }}
                         >
                           {renderMessageContent(msg)}
                           
                           {/* 消息状态指示器 */}
                           {isOwn && (
-                            <div style={{ position: 'absolute', right: '-20px', top: '50%', transform: 'translateY(-50%)' }}>
+                            <div style={{ position: 'absolute', right: '-18px', top: '50%', transform: 'translateY(-50%)' }}>
                               {(msg as any).status === 'failed' && (
                                 <Tooltip title="发送失败，点击重试">
                                   <ExclamationCircleOutlined 
-                                    style={{ color: '#ff4d4f', cursor: 'pointer' }} 
+                                    style={{ color: '#ff4d4f', cursor: 'pointer', fontSize: '12px' }} 
                                     onClick={() => {
                                       if (msg.type !== 'system') {
                                         retrySendMessage(msg._id, msg.content, msg.type as any, msg.fileInfo);
@@ -1190,13 +1205,13 @@ export default function ChatRoomPage() {
                               
                               {(msg as any).status !== 'failed' && msg.readBy?.length > 0 && (
                                 <Tooltip title="已读">
-                                  <CheckCircleOutlined style={{ color: '#52c41a' }} />
+                                  <CheckCircleOutlined style={{ color: '#52c41a', fontSize: '12px' }} />
                                 </Tooltip>
                               )}
                               
                               {(msg as any).status !== 'failed' && (!msg.readBy || msg.readBy.length === 0) && (
                                 <Tooltip title="已发送">
-                                  <CheckCircleOutlined style={{ color: '#999' }} />
+                                  <CheckCircleOutlined style={{ color: '#999', fontSize: '12px' }} />
                                 </Tooltip>
                               )}
                             </div>
@@ -1207,7 +1222,7 @@ export default function ChatRoomPage() {
                           <Avatar 
                             src={user?.avatar} 
                             size="small"
-                            style={{ marginLeft: '8px', flexShrink: 0 }} 
+                            style={{ marginLeft: isMobile ? '4px' : '8px', flexShrink: 0 }} 
                           />
                         )}
                       </div>
@@ -1215,10 +1230,10 @@ export default function ChatRoomPage() {
                       <Text
                         type="secondary"
                         style={{
-                          fontSize: '11px',
-                          marginLeft: isOwn ? '0' : '8px',
-                          marginRight: isOwn ? '8px' : '0',
-                          marginTop: '4px',
+                          fontSize: '10px',
+                          marginLeft: isOwn ? '0' : (isMobile ? '4px' : '8px'),
+                          marginRight: isOwn ? (isMobile ? '4px' : '8px') : '0',
+                          marginTop: '2px',
                           display: 'block',
                           textAlign: isOwn ? 'right' : 'left',
                         }}
@@ -1241,8 +1256,8 @@ export default function ChatRoomPage() {
         
         {/* 附件预览 */}
         {fileAttachments.length > 0 && (
-          <div style={{ padding: '8px 24px', borderBottom: '1px solid var(--border-color)', background: 'var(--card-background)' }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+          <div style={{ padding: isMobile ? '8px 12px' : '8px 24px', borderBottom: '1px solid var(--border-color)', background: 'var(--card-background)' }}>
+            <div style={{ display: 'flex', flexWrap: 'nowrap', overflowX: 'auto', gap: '8px', paddingBottom: '4px' }}>
               {fileAttachments.map((attachment) => (
                 <div
                   key={attachment.id}
@@ -1251,8 +1266,10 @@ export default function ChatRoomPage() {
                     alignItems: 'center',
                     background: 'var(--hover-color)',
                     borderRadius: '6px',
-                    padding: '8px',
-                    maxWidth: '300px'
+                    padding: '6px 8px',
+                    minWidth: '150px',
+                    maxWidth: '200px',
+                    flexShrink: 0
                   }}
                 >
                   {attachment.type.startsWith('image/') ? (
@@ -1261,22 +1278,19 @@ export default function ChatRoomPage() {
                     <FileOutlined style={{ marginRight: '8px', color: '#52c41a' }} />
                   )}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <Text ellipsis style={{ fontSize: '12px' }}>
+                    <Text ellipsis style={{ fontSize: '11px' }}>
                       {attachment.name}
                     </Text>
-                    <Text type="secondary" style={{ fontSize: '11px' }}>
-                      {roomMessageService.formatFileSize(attachment.size)}
-                    </Text>
                     {attachment.status === 'uploading' && (
-                      <Progress percent={attachment.progress} size="small" />
+                      <Progress percent={attachment.progress} size="small" showInfo={false} />
                     )}
                   </div>
                   <Button
                     type="text"
                     size="small"
-                    icon={<DeleteOutlined />}
+                    icon={<DeleteOutlined style={{ fontSize: '12px' }} />}
                     onClick={() => removeAttachment(attachment.id)}
-                    style={{ color: '#ff4d4f' }}
+                    style={{ color: '#ff4d4f', padding: '0 4px' }}
                   />
                 </div>
               ))}
@@ -1286,22 +1300,22 @@ export default function ChatRoomPage() {
 
         {/* 消息输入区域 */}
         <Divider style={{ margin: 0, borderColor: 'var(--border-color)' }} />
-        <div style={{ padding: '16px 24px', background: 'var(--card-background)' }}>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
-            <div style={{ display: 'flex', gap: '4px' }}>
+        <div style={{ padding: isMobile ? '12px' : '16px 24px', background: 'var(--card-background)' }}>
+          <div style={{ display: 'flex', gap: isMobile ? '4px' : '8px', alignItems: 'flex-end' }}>
+            <div style={{ display: 'flex', gap: isMobile ? '0' : '4px' }}>
               <Button 
                 type="text" 
                 icon={<PictureOutlined />}
                 onClick={() => triggerFileInput('image')}
                 disabled={!isMember || sending}
-                title={isMember ? '发送图片' : '非群成员无法发送附件'}
+                size={isMobile ? 'small' : 'middle'}
               />
               <Button 
                 type="text" 
                 icon={<PaperClipOutlined />}
                 onClick={() => triggerFileInput('file')}
                 disabled={!isMember || sending}
-                title={isMember ? '发送文件' : '非群成员无法发送附件'}
+                size={isMobile ? 'small' : 'middle'}
               />
               
               {/* 隐藏的文件输入 */}
@@ -1325,9 +1339,9 @@ export default function ChatRoomPage() {
             <TextArea
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
-              placeholder={isMember ? "输入消息..." : "您不是群成员，无法发送消息"}
+              placeholder={isMember ? (isMobile ? "消息..." : "输入消息...") : "无法发送"}
               autoSize={{ minRows: 1, maxRows: 4 }}
-              style={{ flex: 1 }}
+              style={{ flex: 1, fontSize: isMobile ? '14px' : '14px' }}
               disabled={!isMember || sending}
               onPressEnter={(e) => {
                 if (!e.shiftKey && isMember && !sending) {
@@ -1343,37 +1357,40 @@ export default function ChatRoomPage() {
               onClick={handleSendMessage}
               disabled={(!newMessage.trim() && fileAttachments.length === 0) || !isMember || sending}
               loading={sending}
-              style={{ height: '40px' }}
+              style={{ height: isMobile ? '32px' : '40px' }}
+              size={isMobile ? 'middle' : 'middle'}
             >
-              发送
+              {!isMobile && '发送'}
             </Button>
           </div>
         </div>
         
-        {/* 浮动滚动到底部按钮 */}
+        {/* 浮动滚动到底部按钮 (移动端调小一点) */}
         {showScrollToBottom && (
           <FloatButton
             icon={<DownOutlined />}
             onClick={scrollToBottom}
             type="primary"
             style={{
-              right: 24,
-              bottom: 100
+              right: isMobile ? 12 : 24,
+              bottom: isMobile ? 80 : 100
             }}
           />
         )}
         
-        {/* 浮动刷新按钮 */}
-        <FloatButton
-          icon={<ReloadOutlined />}
-          onClick={() => loadMessages()}
-          type="default"
-          style={{
-            right: 24,
-            bottom: 160
-          }}
-          tooltip="刷新消息"
-        />
+        {/* 浮动刷新按钮 (移动端隐藏，已经在更多操作里有了) */}
+        {!isMobile && (
+          <FloatButton
+            icon={<ReloadOutlined />}
+            onClick={() => loadMessages()}
+            type="default"
+            style={{
+              right: 24,
+              bottom: 160
+            }}
+            tooltip="刷新消息"
+          />
+        )}
       </div>
     </>
   );
