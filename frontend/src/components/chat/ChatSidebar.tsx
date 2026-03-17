@@ -53,7 +53,10 @@ export default function ChatSidebar({ collapsed }: ChatSidebarProps) {
         setRooms(formattedRooms);
       }
     } catch (error) {
-      console.error('加载群聊失败:', error);
+      // 只在开发环境打印日志
+      if (process.env.NODE_ENV === 'development') {
+        console.error('加载群聊失败:', error);
+      }
     } finally {
       setLoading(false);
     }

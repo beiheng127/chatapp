@@ -210,7 +210,7 @@ export default function RoomInfoPage() {
                   <Card
                     size="small"
                     style={{ textAlign: 'center' }}
-                    bodyStyle={{ padding: '12px' }}
+                    styles={{ body: { padding: '12px' } }}
                   >
                     <div style={{ position: 'relative', display: 'inline-block' }}>
                       <Avatar size={64} src={member.avatar} />

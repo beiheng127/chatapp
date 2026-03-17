@@ -17,7 +17,7 @@ export const SessionManagement: React.FC = () => {
       const response = await authService.getSessions();
       if (response.success && response.data) {
         setSessions(response.data.sessions);
-        
+
         // 尝试从当前token中解析sessionId (简单实现，或者依赖后端返回的当前会话标记)
         // 由于后端没有直接返回当前sessionId，我们可以通过比较当前IP和UserAgent来推测，或者后端最好返回currentSessionId
         // 这里暂时通过简单的比较来实现，或者后端API改进
@@ -82,7 +82,7 @@ export const SessionManagement: React.FC = () => {
   };
 
   return (
-    <Card title="登录设备管理" bordered={false} style={{ marginTop: 24 }}>
+    <Card title="登录设备管理" variant="borderless" style={{ marginTop: 24 }}>
       <List
         loading={loading}
         itemLayout="horizontal"
@@ -90,11 +90,11 @@ export const SessionManagement: React.FC = () => {
         renderItem={(item) => (
           <List.Item
             actions={[
-              <Button 
-                key="revoke" 
-                type="text" 
-                danger 
-                icon={<DeleteOutlined />} 
+              <Button
+                key="revoke"
+                type="text"
+                danger
+                icon={<DeleteOutlined />}
                 onClick={() => handleRevoke(item.sessionId)}
               >
                 下线
@@ -103,16 +103,16 @@ export const SessionManagement: React.FC = () => {
           >
             <List.Item.Meta
               avatar={
-                <div style={{ 
-                  fontSize: 24, 
-                  color: '#1890ff', 
-                  background: '#e6f7ff', 
-                  width: 48, 
-                  height: 48, 
-                  borderRadius: '50%', 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center' 
+                <div style={{
+                  fontSize: 24,
+                  color: '#1890ff',
+                  background: '#e6f7ff',
+                  width: 48,
+                  height: 48,
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
                 }}>
                   {getDeviceIcon(item.userAgent)}
                 </div>

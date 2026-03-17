@@ -41,7 +41,10 @@ export default function ChatLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     // 如果未认证，跳转到登录页
     if (mounted && !isLoading && !isAuthenticated) {
-      console.log('ChatLayout: 未认证，跳转到登录页');
+      // 只在开发环境打印日志
+      if (process.env.NODE_ENV === 'development') {
+        console.log('ChatLayout: 未认证，跳转到登录页');
+      }
       router.push('/login');
     }
   }, [isAuthenticated, isLoading, router, mounted]);

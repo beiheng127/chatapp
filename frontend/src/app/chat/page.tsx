@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic';
 import { Skeleton } from 'antd';
 
-// 使用 dynamic 导入进行懒加载
+// 使用 dynamic 导入进行懒加载 - 启用 SSR！
 const ChatHomePageContent = dynamic(() => import('./ChatHomePageContent'), {
   loading: () => (
     <div style={{ 
@@ -22,7 +22,7 @@ const ChatHomePageContent = dynamic(() => import('./ChatHomePageContent'), {
       </div>
     </div>
   ),
-  ssr: false, // 只在客户端渲染
+  ssr: true, // 启用服务端渲染！
 });
 
 export default function ChatHomePage() {

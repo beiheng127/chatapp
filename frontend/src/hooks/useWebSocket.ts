@@ -53,12 +53,12 @@ interface ErrorData {
 }
 
 // 基础消息接口（替换 any）
-type WebSocketData = 
-  | ConnectionSuccessData 
-  | ChatMessageData 
-  | DirectMessageData 
-  | UserJoinedLeftData 
-  | ErrorData 
+type WebSocketData =
+  | ConnectionSuccessData
+  | ChatMessageData
+  | DirectMessageData
+  | UserJoinedLeftData
+  | ErrorData
   | Record<string, unknown>;
 
 interface BaseWebSocketMessage {
@@ -77,7 +77,7 @@ export const useWebSocket = () => {
   const token = useAuthStore((state) => state.token);
   const user = useAuthStore((state) => state.user);
   const addMessage = useChatStore((state) => state.addMessage);
-  
+
   // 消息队列
   const messageQueue = useRef<string[]>([]);
 
@@ -115,7 +115,10 @@ export const useWebSocket = () => {
     wsRef.current = socket;
 
     socket.onopen = () => {
-      console.log('WebSocket 连接已建立');
+      // 只在开发环境打印日志
+      if (process.env.NODE_ENV === 'development') {
+        console.log('WebSocket 连接已建立');
+      }
       setIsConnected(true);
       flushQueue();
     };
@@ -123,7 +126,7 @@ export const useWebSocket = () => {
     socket.onmessage = (event) => {
       try {
         const message: BaseWebSocketMessage = JSON.parse(event.data);
-        
+
         // 忽略后端的 ping/pong 协议包（如果它们被发往 onmessage 的话）
         if ((message as any).type === 'ping' || (message as any).type === 'pong') return;
 
@@ -131,21 +134,24 @@ export const useWebSocket = () => {
         if (message.type === 'chat_message') {
           setReceivedMessages(prev => [...prev, message.data]);
         }
-        
+
         switch (message.type) {
           case WebSocketMessageType.CONNECTION_SUCCESS: { // 加大括号包裹
             const successData = message.data as ConnectionSuccessData;
-            console.log('WebSocket连接成功:', successData.message);
+            // 只在开发环境打印日志
+            if (process.env.NODE_ENV === 'development') {
+              console.log('WebSocket连接成功:', successData.message);
+            }
             break;
           }
 
           case WebSocketMessageType.CHAT_MESSAGE: { // 加大括号包裹
             const chatMsg = message.data as ChatMessageData;
-            
+
             // 派发自定义事件，供组件监听
             if (typeof window !== 'undefined') {
-              const event = new CustomEvent('websocket-chat-message', { 
-                detail: chatMsg 
+              const event = new CustomEvent('websocket-chat-message', {
+                detail: chatMsg
               });
               window.dispatchEvent(event);
             }
@@ -160,7 +166,11 @@ export const useWebSocket = () => {
               timestamp: new Date(chatMsg.timestamp),
               type: 'text'
             };
-            addMessage(newMessage);
+
+            // 使用 requestAnimationFrame 批量更新，减少重渲染
+            requestAnimationFrame(() => {
+              addMessage(newMessage);
+            });
             break;
           }
 
@@ -176,30 +186,46 @@ export const useWebSocket = () => {
               timestamp: new Date(directMsg.timestamp),
               type: 'text'
             };
-            addMessage(directMessage);
+
+            // 使用 requestAnimationFrame 批量更新，减少重渲染
+            requestAnimationFrame(() => {
+              addMessage(directMessage);
+            });
             break;
           }
 
           case WebSocketMessageType.USER_JOINED: { // 加大括号包裹
             const joinData = message.data as UserJoinedLeftData;
-            console.log('用户加入房间:', joinData.username);
+            // 只在开发环境打印日志
+            if (process.env.NODE_ENV === 'development') {
+              console.log('用户加入房间:', joinData.username);
+            }
             break;
           }
 
           case WebSocketMessageType.USER_LEFT: { // 加大括号包裹
             const leftData = message.data as UserJoinedLeftData;
-            console.log('用户离开房间:', leftData.username);
+            // 只在开发环境打印日志
+            if (process.env.NODE_ENV === 'development') {
+              console.log('用户离开房间:', leftData.username);
+            }
             break;
           }
 
           case WebSocketMessageType.ERROR: { // 加大括号包裹
             const errorData = message.data as ErrorData;
-            console.error('WebSocket错误:', errorData.message);
+            // 只在开发环境打印日志
+            if (process.env.NODE_ENV === 'development') {
+              console.error('WebSocket错误:', errorData.message);
+            }
             break;
           }
 
           default:
-            console.log('收到未知消息类型:', message.type);
+            // 只在开发环境打印日志
+            if (process.env.NODE_ENV === 'development') {
+              console.log('收到未知消息类型:', message.type);
+            }
         }
       } catch (error) {
         console.error('消息解析错误:', error);
@@ -207,10 +233,13 @@ export const useWebSocket = () => {
     };
 
     socket.onclose = () => {
-      console.log('WebSocket 连接关闭');
+      // 只在开发环境打印日志
+      if (process.env.NODE_ENV === 'development') {
+        console.log('WebSocket 连接关闭');
+      }
       setIsConnected(false);
       wsRef.current = null;
-      
+
       // 3秒后尝试重连
       setTimeout(() => {
         if (token) {
@@ -220,10 +249,13 @@ export const useWebSocket = () => {
     };
 
     socket.onerror = (error) => {
-      console.error('WebSocket 错误:', error);
+      // 只在开发环境打印日志
+      if (process.env.NODE_ENV === 'development') {
+        console.error('WebSocket 错误:', error);
+      }
       setIsConnected(false);
       wsRef.current = null;
-      
+
       // 3秒后尝试重连
       setTimeout(() => {
         if (token) {
@@ -234,14 +266,14 @@ export const useWebSocket = () => {
   }, [token, addMessage]);
 
   const sendChatMessage = useCallback((roomId: string, content: string) => {
-    return sendMessage('chat_message', { 
-      roomId, 
+    return sendMessage('chat_message', {
+      roomId,
       content,
       senderId: user?.id,
       username: user?.username,
       timestamp: new Date().toISOString()
     });
-  }, [sendMessage,user]);
+  }, [sendMessage, user]);
 
   const sendDirectMessage = useCallback((toUserId: string, content: string, messageData?: Partial<DirectMessageData>) => {
     return sendMessage('direct_message', { toUserId, content, ...messageData });
@@ -263,7 +295,7 @@ export const useWebSocket = () => {
     if (token) {
       connect();
     }
-    
+
     return () => {
       if (wsRef.current) {
         try {
@@ -280,9 +312,9 @@ export const useWebSocket = () => {
     };
   }, [token, connect]);
 
-  return { 
+  return {
     isConnected,
-    sendChatMessage, 
+    sendChatMessage,
     sendDirectMessage,
     joinRoom,
     startTyping,

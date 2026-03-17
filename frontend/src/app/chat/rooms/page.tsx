@@ -19,7 +19,9 @@ import {
   Col,
   Switch,
   message,
-  Grid
+  Grid,
+  Skeleton,
+  Empty
 } from 'antd';
 import {
   TeamOutlined,
@@ -80,15 +82,15 @@ export default function ChatRoomsPage() {
         isPrivate: values.isPrivate,
         type: 'group',
       });
-      
+
       if (result.success && result.data) {
         messageApi.success('聊天室创建成功！');
         setShowCreateModal(false);
         form.resetFields();
-        
+
         // 使用 mutate 立即刷新数据
         mutateUserRooms();
-        
+
         // 跳转到新创建的群聊
         router.push(`/chat/${result.data._id}`);
       } else {
@@ -151,10 +153,10 @@ export default function ChatRoomsPage() {
     <>
       {contextHolder}
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: isMobile ? '0 4px' : '0' }}>
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center', 
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
           marginBottom: isMobile ? '16px' : '24px',
           flexDirection: isMobile ? 'row' : 'row'
         }}>
@@ -197,18 +199,18 @@ export default function ChatRoomsPage() {
                         style={{ height: '100%' }}
                         styles={{ body: { padding: isMobile ? '12px' : '24px' } }}
                         actions={[
-                          <Button 
-                            key="chat" 
-                            type="primary" 
+                          <Button
+                            key="chat"
+                            type="primary"
                             icon={<MessageOutlined />}
                             onClick={() => router.push(`/chat/${room._id}`)}
                             size={isMobile ? 'middle' : 'middle'}
                           >
                             进入
                           </Button>,
-                          <Button 
-                            key="leave" 
-                            danger 
+                          <Button
+                            key="leave"
+                            danger
                             size={isMobile ? 'middle' : 'small'}
                             onClick={() => leaveRoom(room._id)}
                           >
@@ -219,12 +221,12 @@ export default function ChatRoomsPage() {
                         <Card.Meta
                           avatar={
                             <Badge count={0} offset={[-10, 10]}>
-                              <Avatar 
+                              <Avatar
                                 size={isMobile ? 'default' : 'large'}
                                 src={room.avatar && !room.avatar.includes('default') ? room.avatar : undefined}
                                 icon={<TeamOutlined />}
-                                style={{ 
-                                  backgroundColor: room.isPrivate ? '#ff4d4f' : '#1890ff' 
+                                style={{
+                                  backgroundColor: room.isPrivate ? '#ff4d4f' : '#1890ff'
                                 }}
                               />
                             </Badge>
@@ -240,9 +242,9 @@ export default function ChatRoomsPage() {
                               <Text type="secondary" style={{ fontSize: isMobile ? '13px' : '14px', color: 'var(--text-secondary)' }}>
                                 {room.description || '暂无描述'}
                               </Text>
-                              
+
                               <Divider style={{ margin: isMobile ? '8px 0' : '12px 0', borderColor: 'var(--border-color)' }} />
-                              
+
                               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: isMobile ? '11px' : '12px', color: 'var(--text-secondary)' }}>
                                 <div>
                                   <UserAddOutlined /> {room.memberCount}/{room.maxMembers}
@@ -278,9 +280,9 @@ export default function ChatRoomsPage() {
                     style={{ height: '100%' }}
                     styles={{ body: { padding: isMobile ? '12px' : '24px' } }}
                     actions={[
-                      <Button 
-                        key="join" 
-                        type="primary" 
+                      <Button
+                        key="join"
+                        type="primary"
                         icon={<MessageOutlined />}
                         onClick={() => joinRoom(room._id)}
                         size={isMobile ? 'middle' : 'middle'}
@@ -294,12 +296,12 @@ export default function ChatRoomsPage() {
                   >
                     <Card.Meta
                       avatar={
-                        <Avatar 
+                        <Avatar
                           size={isMobile ? 'default' : 'large'}
                           src={room.avatar && !room.avatar.includes('default') ? room.avatar : undefined}
                           icon={<TeamOutlined />}
-                          style={{ 
-                            backgroundColor: room.isPrivate ? '#ff4d4f' : '#1890ff' 
+                          style={{
+                            backgroundColor: room.isPrivate ? '#ff4d4f' : '#1890ff'
                           }}
                         />
                       }
@@ -314,14 +316,14 @@ export default function ChatRoomsPage() {
                           <Text type="secondary" style={{ fontSize: isMobile ? '13px' : '14px', color: 'var(--text-secondary)' }}>
                             {room.description || '暂无描述'}
                           </Text>
-                          
+
                           <Divider style={{ margin: isMobile ? '8px 0' : '12px 0', borderColor: 'var(--border-color)' }} />
-                          
+
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '12px' }}>
                             <Tag color="blue" style={{ fontSize: '11px' }}>{room.type === 'group' ? '群聊' : '频道'}</Tag>
                             {room.isPrivate && <Tag color="red" style={{ fontSize: '11px' }}>私密</Tag>}
                           </div>
-                          
+
                           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: isMobile ? '11px' : '12px', color: 'var(--text-secondary)' }}>
                             <div>
                               <UserAddOutlined /> {room.memberCount}/{room.maxMembers}
@@ -406,12 +408,12 @@ export default function ChatRoomsPage() {
                 >
                   <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', gap: '8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <Switch checkedChildren="私密" unCheckedChildren="公开" onChange={(checked) => {form.setFieldsValue({ isPrivate: checked });}}/>
+                      <Switch checkedChildren="私密" unCheckedChildren="公开" onChange={(checked) => { form.setFieldsValue({ isPrivate: checked }); }} />
                       <Text strong>{form.getFieldValue('isPrivate') ? '私密' : '公开'}</Text>
                     </div>
-                     <Text type="secondary" style={{ fontSize: '11px' }}>
-                      {form.getFieldValue('isPrivate') 
-                        ? '需要邀请加入' 
+                    <Text type="secondary" style={{ fontSize: '11px' }}>
+                      {form.getFieldValue('isPrivate')
+                        ? '需要邀请加入'
                         : '公开搜索并加入'}
                     </Text>
                   </div>

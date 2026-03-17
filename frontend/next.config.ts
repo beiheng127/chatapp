@@ -30,7 +30,9 @@ const nextConfig: NextConfig = {
         hostname: 'localhost',
       },
     ],
-    unoptimized: true,
+    formats: ['image/avif', 'image/webp'],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
   
   // // 如果使用webpack
@@ -46,10 +48,10 @@ const nextConfig: NextConfig = {
   //   return config;
   // },
   
-  // 禁用严格的服务器端渲染
+  // 启用性能优化选项
   experimental: {
-    // optimizeCss: false,
-    // serverComponentsExternalPackages: [],
+    optimizeCss: true,
+    serverActions: true,
   },
   serverExternalPackages: ["mongoose"],
   // 输出追踪

@@ -16,21 +16,21 @@ interface CustomWebSocket extends WebSocket {
 }
 
 // 2. 类型别名提升可读性（移除 any，精准定义）
-type MessageType = 
-  | 'connection_success' 
-  | 'error' 
-  | 'join_room' 
-  | 'user_joined' 
-  | 'user_left' 
+type MessageType =
+  | 'connection_success'
+  | 'error'
+  | 'join_room'
+  | 'user_joined'
+  | 'user_left'
   | 'room_joined'
-  | 'chat_message' 
-  | 'message_sent' 
+  | 'chat_message'
+  | 'message_sent'
   | 'direct_message'
-  | 'typing_start' 
-  | 'user_typing' 
-  | 'typing_end' 
+  | 'typing_start'
+  | 'user_typing'
+  | 'typing_end'
   | 'user_stopped_typing'
-  | 'get_online_users' 
+  | 'get_online_users'
   | 'online_users_list';
 
 // 修复：移除 any，定义通用消息数据类型
@@ -253,35 +253,49 @@ function sendMessage<T>(ws: CustomWebSocket, message: WsMessage<T>) {
 // }
 
 /**
- * 发送消息给指定用户（支持多端连接）
+ * 发送消息给指定用户（支持多端连接，性能优化版）
  * @param userId 目标用户ID
  * @param message 消息对象
  */
 function sendToUser<T>(userId: string, message: WsMessage<T>) {
   const connections = userConnections.get(userId);
   if (connections) {
-    connections.forEach(ws => sendMessage(ws, message));
+    const messageStr = JSON.stringify(message);
+    connections.forEach(ws => {
+      try {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(messageStr);
+        }
+      } catch (error) {
+        console.error(`发送消息给用户 ${userId} 失败:`, error);
+      }
+    });
   } else {
     console.warn(`用户 ${userId} 无在线连接，无法发送消息`);
   }
 }
 
 /**
- * 广播消息给房间内所有用户
+ * 广播消息给房间内所有用户（性能优化版）
  * @param roomId 房间ID
  * @param message 消息对象
  * @param excludeUserId 排除的用户ID
  */
 function broadcastToRoom<T>(roomId: string, message: WsMessage<T>, excludeUserId?: string) {
+  // 只序列化一次消息，提升性能
+  const messageStr = JSON.stringify(message);
+
   onlineUsers.forEach((ws, userId) => {
     // 检查是否排除该用户
     if (excludeUserId && userId === excludeUserId) return;
-    
+
     // 检查用户是否在该房间
     const customWs = ws as CustomWebSocket;
     if (customWs.roomIds && customWs.roomIds.includes(roomId)) {
       try {
-        sendMessage(customWs, message);
+        if (customWs.readyState === WebSocket.OPEN) {
+          customWs.send(messageStr);
+        }
       } catch (error) {
         console.error(`发送消息给用户 ${userId} 失败:`, error);
       }
@@ -378,14 +392,14 @@ async function handleWebSocketMessage(
 
       // 群聊消息
       case 'chat_message': {
-        const { roomId: chatRoomId, content, senderId: wsSenderId, username, id } = data as { 
-          roomId?: string; 
+        const { roomId: chatRoomId, content, senderId: wsSenderId, username, id } = data as {
+          roomId?: string;
           content?: string;
           senderId?: string;
           username?: string;
           id?: string;
         };
-        
+
         if (!chatRoomId || !content || !mongoose.Types.ObjectId.isValid(chatRoomId)) {
           throw new Error('房间ID和消息内容不能为空，且房间ID格式需合法');
         }
@@ -418,13 +432,13 @@ async function handleWebSocketMessage(
 
       // 私聊消息
       case 'direct_message': {
-        const { toUserId, content: dmContent, id, timestamp } = data as { 
-          toUserId?: string; 
+        const { toUserId, content: dmContent, id, timestamp } = data as {
+          toUserId?: string;
           content?: string;
           id?: string;
           timestamp?: string;
         };
-        
+
         if (!toUserId || !dmContent || !mongoose.Types.ObjectId.isValid(toUserId)) {
           throw new Error('接收者ID和消息内容不能为空，且用户ID格式需合法');
         }
